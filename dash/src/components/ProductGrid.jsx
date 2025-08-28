@@ -1,23 +1,18 @@
 import { useState, useEffect } from 'react';
-import { productData } from '/src/data/mockData';
 
 function ProductGrid() {
-  const [products, setProducts] = useState(productData);
-  const [newProduct, setNewProduct] = useState({ id: Date.now(), name: '', price: '', description: '', image: '' });
+  const [products, setProducts] = useState([]);
+  const [newProduct, setNewProduct] = useState({ name: '', price: '', description: '', image: null });
   const [previewImage, setPreviewImage] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [notification, setNotification] = useState({ message: '', visible: false });
 
   useEffect(() => {
-    const savedProducts = localStorage.getItem('products');
-    if (savedProducts) {
-      setProducts(JSON.parse(savedProducts));
-    }
+    fetch('http://localhost:5000/api/products')
+      .then(res => res.json())
+      .then(data => setProducts(data))
+      .catch(err => console.error('Error fetching products:', err));
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem('products', JSON.stringify(products));
-  }, [products]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -27,24 +22,48 @@ function ProductGrid() {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      setNewProduct({ ...newProduct, image: URL.createObjectURL(file) });
+      setNewProduct({ ...newProduct, image: file });
       setPreviewImage(URL.createObjectURL(file));
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!newProduct.name || !newProduct.price || !newProduct.description || !newProduct.image) {
       setNotification({ message: 'Please fill all fields and upload an image.', visible: true });
       setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
       return;
     }
-    setProducts([...products, newProduct]);
-    setNewProduct({ id: Date.now(), name: '', price: '', description: '', image: '' });
-    setPreviewImage('');
-    setIsFormOpen(false);
-    setNotification({ message: 'Product added successfully!', visible: true });
-    setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+
+    try {
+      const formData = new FormData();
+      formData.append('name', newProduct.name);
+      formData.append('price', newProduct.price);
+      formData.append('description', newProduct.description);
+      formData.append('image', newProduct.image);
+
+      const response = await fetch('http://localhost:5000/api/products', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add product');
+      }
+
+      const addedProduct = await response.json();
+      setProducts([...products, addedProduct]);
+      setNewProduct({ name: '', price: '', description: '', image: null });
+      setPreviewImage('');
+      setIsFormOpen(false);
+      setNotification({ message: 'Product added successfully!', visible: true });
+      setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+    } catch (error) {
+      console.error('Error adding product:', error);
+      setNotification({ message: error.message || 'Error adding product.', visible: true });
+      setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+    }
   };
 
   return (
@@ -55,8 +74,8 @@ function ProductGrid() {
           top: '20px',
           left: '50%',
           transform: 'translateX(-50%)',
-          backgroundColor: notification.message.includes('Please') ? '#ffcccc' : '#d4edda',
-          color: notification.message.includes('Please') ? '#721c24' : '#155724',
+          backgroundColor: notification.message.includes('Please') || notification.message.includes('Error') ? '#ffcccc' : '#d4edda',
+          color: notification.message.includes('Please') || notification.message.includes('Error') ? '#721c24' : '#155724',
           padding: '12px 20px',
           borderRadius: '6px',
           boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
@@ -188,7 +207,7 @@ function ProductGrid() {
                   type="button"
                   onClick={() => {
                     setIsFormOpen(false);
-                    setNewProduct({ id: Date.now(), name: '', price: '', description: '', image: '' });
+                    setNewProduct({ id: Date.now(), name: '', price: '', description: '', image: null });
                     setPreviewImage('');
                   }}
                   style={{
@@ -234,18 +253,14 @@ function ProductGrid() {
               textAlign: 'center',
               boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
               transition: 'transform 0.2s, box-shadow 0.2s',
-              '&:hover': {
-                transform: 'translateY(-2px)',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
-              }
             }}
           >
             <div style={{ border: '1px solid #e0e0e0', borderRadius: '8px', padding: '5px', marginBottom: '10px', position: 'relative', paddingTop: '56.25%' }}>
-              <img src={product.image} alt={product.name} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', borderRadius: '6px' }} />
+              <img src={`http://localhost:5000${product.image}`} alt={product.name} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', borderRadius: '6px' }} />
             </div>
             <h3 style={{ color: '#1e293b', fontSize: '18px', margin: '10px 0', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>{product.name}</h3>
             <div style={{ backgroundColor: '#f0f4f8', padding: '10px', borderRadius: '6px', margin: '10px 0' }}>
-              <p style={{ color: '#0a9396', fontSize: '20px', fontWeight: '600', margin: 0 }}>₹{product.price.toLocaleString('en-IN')}</p>
+              <p style={{ color: '#0a9396', fontSize: '20px', fontWeight: '600', margin: 0 }}>₹{Number(product.price).toLocaleString('en-IN')}</p>
             </div>
             <div style={{ backgroundColor: '#fff', padding: '12px', borderRadius: '6px', border: '1px solid #e0e0e0', minHeight: '60px' }}>
               <p style={{ color: '#64748b', fontSize: '14px', lineHeight: '1.5', margin: 0, fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>{product.description}</p>

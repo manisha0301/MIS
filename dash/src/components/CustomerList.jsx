@@ -1,32 +1,8 @@
+import { useEffect } from 'react';
 import { useState } from 'react';
 
-// Mock initial data
-const initialCustomerData = [
-  {
-    id: 1,
-    name: "John Doe",
-    contact: "9876543210",
-    state: "Maharashtra",
-    totalPurchases: 25000
-  },
-  {
-    id: 2,
-    name: "Jane Smith",
-    contact: "8765432109",
-    state: "Karnataka",
-    totalPurchases: 18500
-  },
-  {
-    id: 3,
-    name: "Raj Patel",
-    contact: "7654321098",
-    state: "Gujarat",
-    totalPurchases: 32000
-  }
-];
-
 function CustomerList() {
-  const [customers, setCustomers] = useState(initialCustomerData);
+  const [customers, setCustomers] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -34,6 +10,14 @@ function CustomerList() {
     state: '',
     totalPurchases: 0
   });
+
+  useEffect(() => {
+    // Fetch customers from backend
+    fetch('http://localhost:5000/api/customers')
+      .then(res => res.json())
+      .then(data => setCustomers(data))
+      .catch(err => console.error('Error fetching customers:', err));
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -43,32 +27,40 @@ function CustomerList() {
     }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     // Validate form
     if (!formData.name || !formData.contact || !formData.state) {
       alert('Please fill in all required fields');
       return;
     }
 
-    // Create new customer with unique ID
-    const newCustomer = {
-      id: customers.length > 0 ? Math.max(...customers.map(c => c.id)) + 1 : 1,
-      ...formData
-    };
-
-    // Add to customers list (simulating database save)
-    setCustomers(prev => [...prev, newCustomer]);
-    
-    // Reset form and close modal
-    setFormData({
-      name: '',
-      contact: '',
-      state: '',
-      totalPurchases: 0
-    });
-    setShowModal(false);
-    
-    alert('Customer added successfully!');
+    try {
+      const newCustomer = {
+        id: customers.length > 0 ? Math.max(...customers.map(c => c.id)) + 1 : 1,
+        ...formData
+      };
+      const response = await fetch('http://localhost:5000/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCustomer),
+      });
+      if (response.ok) {
+        const addedCustomer = await response.json();
+        setCustomers(prev => [...prev, addedCustomer]);
+        setFormData({
+          name: '',
+          contact: '',
+          state: '',
+          totalPurchases: 0
+        });
+        setShowModal(false);
+        alert('Customer added successfully!');
+      } else {
+        throw new Error('Failed to add customer');
+      }
+    } catch (error) {
+      alert('Error adding customer');
+    }
   };
 
   const handleCancel = () => {
@@ -218,7 +210,7 @@ function CustomerList() {
                   <td>{customer.name}</td>
                   <td>{customer.contact}</td>
                   <td>{customer.state}</td>
-                  <td>₹{customer.totalPurchases.toLocaleString('en-IN')}</td>
+                  <td>₹{Number(customer.total_purchases).toLocaleString('en-IN')}</td>
                 </tr>
               ))}
             </tbody>
