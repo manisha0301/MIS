@@ -1,11 +1,10 @@
-import { useState } from 'react';
-import { salesInvoices as initialSalesInvoices, purchaseInvoices as initialPurchaseInvoices } from '/src/data/mockData';
+import { useState, useEffect } from 'react';
 
 function InvoiceList() {
   const [activeTab, setActiveTab] = useState('sales');
   const [modalTab, setModalTab] = useState('sales');
-  const [salesInvoices, setSalesInvoices] = useState(initialSalesInvoices);
-  const [purchaseInvoices, setPurchaseInvoices] = useState(initialPurchaseInvoices);
+  const [salesInvoices, setSalesInvoices] = useState([]);
+  const [purchaseInvoices, setPurchaseInvoices] = useState([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [newInvoice, setNewInvoice] = useState({
     number: '',
@@ -22,38 +21,124 @@ function InvoiceList() {
   const [previewPdf, setPreviewPdf] = useState('');
   const [notification, setNotification] = useState({ message: '', visible: false });
 
-  const handleStatusToggle = (id, tab) => {
-    if (tab === 'sales') {
-      setSalesInvoices(prev => prev.map(inv => 
-        inv.id === id ? { ...inv, status: inv.status === 'Paid' ? 'Due' : 'Paid' } : inv
-      ));
-    } else {
-      setPurchaseInvoices(prev => prev.map(inv => 
-        inv.id === id ? { ...inv, status: inv.status === 'Paid' ? 'Due' : 'Paid' } : inv
-      ));
-    }
+  // Fetch invoices on component mount
+  useEffect(() => {
+    const fetchInvoices = async () => {
+      try {
+        const token = localStorage.getItem('token'); // Assuming token is stored in localStorage
+        const salesResponse = await fetch('http://localhost:5000/api/invoices/sales', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        const purchaseResponse = await fetch('http://localhost:5000/api/invoices/purchase', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+
+        if (!salesResponse.ok || !purchaseResponse.ok) {
+          throw new Error('Failed to fetch invoices');
+        }
+
+        const salesData = await salesResponse.json();
+        const purchaseData = await purchaseResponse.json();
+        setSalesInvoices(salesData);
+        setPurchaseInvoices(purchaseData);
+      } catch (error) {
+        setNotification({ message: 'Error fetching invoices', visible: true });
+        setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+      }
+    };
+    fetchInvoices();
+  }, []);
+
+  const formatDateToIST = (utcDate) => {
+    if (!utcDate) return '';
+    const date = new Date(utcDate);
+    return date.toLocaleDateString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
   };
 
-  const handlePdfUpload = (e, id, tab) => {
-    const file = e.target.files[0];
-    if (file && file.type === 'application/pdf') {
-      const pdfUrl = URL.createObjectURL(file);
+  const handleStatusToggle = async (id, tab) => {
+    const newStatus = tab === 'sales'
+      ? salesInvoices.find(inv => inv.id === id).status === 'Paid' ? 'Due' : 'Paid'
+      : purchaseInvoices.find(inv => inv.id === id).status === 'Paid' ? 'Due' : 'Paid';
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/invoices/${id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update status');
+      }
+
+      const updatedInvoice = await response.json();
       if (tab === 'sales') {
         setSalesInvoices(prev => prev.map(inv => 
-          inv.id === id ? { ...inv, pdfUrl } : inv
+          inv.id === id ? { ...inv, status: newStatus } : inv
         ));
       } else {
         setPurchaseInvoices(prev => prev.map(inv => 
-          inv.id === id ? { ...inv, pdfUrl } : inv
+          inv.id === id ? { ...inv, status: newStatus } : inv
         ));
       }
+      setNotification({ message: 'Status updated successfully!', visible: true });
+      setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+    } catch (error) {
+      setNotification({ message: 'Error updating status', visible: true });
+      setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+    }
+  };
+
+  const handlePdfUpload = async (e, id, tab) => {
+    const file = e.target.files[0];
+    if (file && file.type === 'application/pdf') {
+      const formData = new FormData();
+      formData.append('pdf', file);
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`http://localhost:5000/api/invoices/${id}/pdf`, {
+          method: 'PUT',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to upload PDF');
+        }
+
+        const updatedInvoice = await response.json();
+        if (tab === 'sales') {
+          setSalesInvoices(prev => prev.map(inv => 
+            inv.id === id ? { ...inv, pdf_url: updatedInvoice.pdf_url } : inv
+          ));
+        } else {
+          setPurchaseInvoices(prev => prev.map(inv => 
+            inv.id === id ? { ...inv, pdf_url: updatedInvoice.pdf_url } : inv
+          ));
+        }
+        setNotification({ message: 'PDF uploaded successfully!', visible: true });
+        setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+      } catch (error) {
+        setNotification({ message: 'Error uploading PDF', visible: true });
+        setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+      }
     } else {
-      alert('Please upload a PDF file.');
+      setNotification({ message: 'Please upload a PDF file.', visible: true });
+      setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
     }
   };
 
   const openPdf = (pdfUrl) => {
-    window.open(pdfUrl, '_blank');
+    window.open(`http://localhost:5000${pdfUrl}`, '_blank');
   };
 
   const handleInputChange = (e) => {
@@ -72,7 +157,7 @@ function InvoiceList() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const requiredFields = modalTab === 'sales' 
       ? ['number', 'date', 'customer', 'amount', 'dueDate', 'paymentMethod']
@@ -84,36 +169,60 @@ function InvoiceList() {
       return;
     }
 
-    const newInvoiceData = {
-      id: Date.now(),
-      ...newInvoice,
-      amount: parseFloat(newInvoice.amount),
-      pdfUrl: newInvoice.pdf ? URL.createObjectURL(newInvoice.pdf) : null,
-      [modalTab === 'sales' ? 'customer' : 'supplier']: newInvoice[modalTab === 'sales' ? 'customer' : 'supplier'],
-    };
-
-    if (modalTab === 'sales') {
-      setSalesInvoices(prev => [...prev, newInvoiceData]);
-    } else {
-      setPurchaseInvoices(prev => [...prev, newInvoiceData]);
+    const formData = new FormData();
+    formData.append('type', modalTab);
+    formData.append('number', newInvoice.number);
+    formData.append('date', newInvoice.date);
+    formData.append('customer', newInvoice.customer || '');
+    formData.append('supplier', newInvoice.supplier || '');
+    formData.append('amount', newInvoice.amount);
+    formData.append('dueDate', newInvoice.dueDate);
+    formData.append('paymentMethod', newInvoice.paymentMethod);
+    formData.append('notes', newInvoice.notes || '');
+    formData.append('status', newInvoice.status);
+    if (newInvoice.pdf) {
+      formData.append('pdf', newInvoice.pdf);
     }
 
-    setNewInvoice({
-      number: '',
-      date: '',
-      customer: '',
-      supplier: '',
-      amount: '',
-      dueDate: '',
-      paymentMethod: '',
-      notes: '',
-      status: 'Due',
-      pdf: null,
-    });
-    setPreviewPdf('');
-    setIsFormOpen(false);
-    setNotification({ message: 'Invoice added successfully!', visible: true });
-    setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/invoices', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to add invoice');
+      }
+
+      const newInvoiceData = await response.json();
+      if (modalTab === 'sales') {
+        setSalesInvoices(prev => [...prev, newInvoiceData]);
+      } else {
+        setPurchaseInvoices(prev => [...prev, newInvoiceData]);
+      }
+
+      setNewInvoice({
+        number: '',
+        date: '',
+        customer: '',
+        supplier: '',
+        amount: '',
+        dueDate: '',
+        paymentMethod: '',
+        notes: '',
+        status: 'Due',
+        pdf: null,
+      });
+      setPreviewPdf('');
+      setIsFormOpen(false);
+      setNotification({ message: 'Invoice added successfully!', visible: true });
+      setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+    } catch (error) {
+      setNotification({ message: 'Error adding invoice', visible: true });
+      setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+    }
   };
 
   return (
@@ -434,11 +543,11 @@ function InvoiceList() {
                   <tr key={invoice.id}>
                     <td>{index + 1}</td>
                     <td>{invoice.number}</td>
-                    <td>{invoice.date}</td>
+                    <td>{formatDateToIST(invoice.date)}</td>
                     <td>{invoice.customer}</td>
                     <td>₹{invoice.amount.toLocaleString('en-IN')}</td>
-                    <td>{invoice.dueDate}</td>
-                    <td>{invoice.paymentMethod}</td>
+                    <td>{formatDateToIST(invoice.due_date)}</td>
+                    <td>{invoice.payment_method}</td>
                     <td>{invoice.notes}</td>
                     <td>
                       <label className="switch">
@@ -451,8 +560,8 @@ function InvoiceList() {
                       </label>
                     </td>
                     <td>
-                      {invoice.pdfUrl ? (
-                        <button onClick={() => openPdf(invoice.pdfUrl)} className="action-button">View PDF</button>
+                      {invoice.pdf_url ? (
+                        <button onClick={() => openPdf(invoice.pdf_url)} className="action-button">View PDF</button>
                       ) : (
                         <input type="file" accept=".pdf" onChange={(e) => handlePdfUpload(e, invoice.id, 'sales')} />
                       )}
@@ -489,11 +598,11 @@ function InvoiceList() {
                   <tr key={invoice.id}>
                     <td>{index + 1}</td>
                     <td>{invoice.number}</td>
-                    <td>{invoice.date}</td>
+                    <td>{formatDateToIST(invoice.date)}</td>
                     <td>{invoice.supplier}</td>
                     <td>₹{invoice.amount.toLocaleString('en-IN')}</td>
-                    <td>{invoice.dueDate}</td>
-                    <td>{invoice.paymentMethod}</td>
+                    <td>{formatDateToIST(invoice.due_date)}</td>
+                    <td>{invoice.payment_method}</td>
                     <td>{invoice.notes}</td>
                     <td>
                       <label className="switch">
@@ -506,8 +615,8 @@ function InvoiceList() {
                       </label>
                     </td>
                     <td>
-                      {invoice.pdfUrl ? (
-                        <button onClick={() => openPdf(invoice.pdfUrl)} className="action-button">View PDF</button>
+                      {invoice.pdf_url ? (
+                        <button onClick={() => openPdf(invoice.pdf_url)} className="action-button">View PDF</button>
                       ) : (
                         <input type="file" accept=".pdf" onChange={(e) => handlePdfUpload(e, invoice.id, 'purchase')} />
                       )}

@@ -2,8 +2,10 @@ const express = require('express');
 const cors = require('cors');
 const productRoutes = require('./routes/productRoutes');
 const customerRoutes = require('./routes/customerRoutes');
+const invoiceRoutes = require('./routes/invoiceRoutes');
 const productModel = require('./models/productModel');
 const customerModel = require('./models/customerModel');
+const invoiceModel = require('./models/invoiceModel');
 const path = require('path');
 
 const app = express();
@@ -18,12 +20,14 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // Routes
 app.use('/api/products', productRoutes);
 app.use('/api/customers', customerRoutes);
+app.use('/api/invoices', invoiceRoutes);
 
 // Initialize database tables
 const initializeDatabase = async () => {
   try {
     await productModel.createProductsTable();
     await customerModel.createCustomersTable();
+    await invoiceModel.createInvoicesTable();
     console.log('Database initialized');
   } catch (error) {
     console.error('Error initializing database:', error);
