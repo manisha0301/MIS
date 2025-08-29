@@ -1,102 +1,42 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { FaMoneyBillWave, FaEdit, FaTrash } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
 
 function ExpenditureDetails() {
-  const [expenditureData, setExpenditureData] = useState({
-    details: [
-      {
-        category: 'Rent',
-        items: [
-          { name: 'Office Lease', amount: 1500000, quarter: 'Mar-May' },
-          { name: 'Parking Space', amount: 200000, quarter: 'Mar-May' },
-          { name: 'Office Lease', amount: 1550000, quarter: 'Jun-Aug' },
-          { name: 'Parking Space', amount: 210000, quarter: 'Jun-Aug' },
-          { name: 'Office Lease', amount: 1600000, quarter: 'Sep-Nov' },
-          { name: 'Parking Space', amount: 220000, quarter: 'Sep-Nov' },
-          { name: 'Office Lease', amount: 1650000, quarter: 'Dec-Feb' },
-          { name: 'Parking Space', amount: 230000, quarter: 'Dec-Feb' }
-        ]
-      },
-      {
-        category: 'Utilities',
-        items: [
-          { name: 'Electricity', amount: 50000, quarter: 'Mar-May' },
-          { name: 'Water', amount: 15000, quarter: 'Mar-May' },
-          { name: 'Internet', amount: 10000, quarter: 'Mar-May' },
-          { name: 'Electricity', amount: 52000, quarter: 'Jun-Aug' },
-          { name: 'Water', amount: 16000, quarter: 'Jun-Aug' },
-          { name: 'Internet', amount: 11000, quarter: 'Jun-Aug' },
-          { name: 'Electricity', amount: 53000, quarter: 'Sep-Nov' },
-          { name: 'Water', amount: 17000, quarter: 'Sep-Nov' },
-          { name: 'Internet', amount: 12000, quarter: 'Sep-Nov' },
-          { name: 'Electricity', amount: 54000, quarter: 'Dec-Feb' },
-          { name: 'Water', amount: 18000, quarter: 'Dec-Feb' },
-          { name: 'Internet', amount: 13000, quarter: 'Dec-Feb' }
-        ]
-      },
-      {
-        category: 'Cleaning',
-        items: [
-          { name: 'Janitorial Services', amount: 30000, quarter: 'Mar-May' },
-          { name: 'Cleaning Supplies', amount: 8000, quarter: 'Mar-May' },
-          { name: 'Janitorial Services', amount: 31000, quarter: 'Jun-Aug' },
-          { name: 'Cleaning Supplies', amount: 8500, quarter: 'Jun-Aug' },
-          { name: 'Janitorial Services', amount: 32000, quarter: 'Sep-Nov' },
-          { name: 'Cleaning Supplies', amount: 9000, quarter: 'Sep-Nov' },
-          { name: 'Janitorial Services', amount: 33000, quarter: 'Dec-Feb' },
-          { name: 'Cleaning Supplies', amount: 9500, quarter: 'Dec-Feb' }
-        ]
-      },
-      {
-        category: 'Repairs',
-        items: [
-          { name: 'HVAC Maintenance', amount: 25000, quarter: 'Mar-May' },
-          { name: 'Equipment Repairs', amount: 15000, quarter: 'Mar-May' },
-          { name: 'HVAC Maintenance', amount: 26000, quarter: 'Jun-Aug' },
-          { name: 'Equipment Repairs', amount: 16000, quarter: 'Jun-Aug' },
-          { name: 'HVAC Maintenance', amount: 27000, quarter: 'Sep-Nov' },
-          { name: 'Equipment Repairs', amount: 17000, quarter: 'Sep-Nov' },
-          { name: 'HVAC Maintenance', amount: 28000, quarter: 'Dec-Feb' },
-          { name: 'Equipment Repairs', amount: 18000, quarter: 'Dec-Feb' }
-        ]
-      },
-      {
-        category: 'Supplies',
-        items: Array.from({ length: 100 }, (_, index) => ({
-          name: `Office Item ${index + 1}`,
-          amount: 5000 + Math.floor(Math.random() * 10000),
-          quarter: ['Mar-May', 'Jun-Aug', 'Sep-Nov', 'Dec-Feb'][Math.floor(index / 25)]
-        }))
-      },
-      {
-        category: 'Salaries',
-        items: [
-          { name: 'Employee Salaries', amount: 2500000, quarter: 'Mar-May' },
-          { name: 'Bonuses', amount: 500000, quarter: 'Mar-May' },
-          { name: 'Employee Salaries', amount: 2550000, quarter: 'Jun-Aug' },
-          { name: 'Bonuses', amount: 510000, quarter: 'Jun-Aug' },
-          { name: 'Employee Salaries', amount: 2600000, quarter: 'Sep-Nov' },
-          { name: 'Bonuses', amount: 520000, quarter: 'Sep-Nov' },
-          { name: 'Employee Salaries', amount: 2650000, quarter: 'Dec-Feb' },
-          { name: 'Bonuses', amount: 530000, quarter: 'Dec-Feb' }
-        ]
-      }
-    ]
-  });
+  const [expenditureData, setExpenditureData] = useState({ details: [] });
   const [selectedQuarter, setSelectedQuarter] = useState('All Quarters');
-  const [editCategory, setEditCategory] = useState(null);
-  const [editedItem, setEditedItem] = useState({ name: '', amount: '', quarter: 'Mar-May' });
+  const [editItem, setEditItem] = useState(null);
+  const [editedItem, setEditedItem] = useState({ id: '', name: '', amount: '', quarter: 'Mar-May' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const fileInputRef = useRef(null);
 
-  // Filter data based on selected quarter
-  const filteredDetails = selectedQuarter === 'All Quarters'
-    ? expenditureData.details
-    : expenditureData.details.map(category => ({
-        category: category.category,
-        items: category.items.filter(item => item.quarter === selectedQuarter)
-      })).filter(category => category.items.length > 0);
+  // Fetch expenditure data from backend
+  const fetchExpenditures = async (quarter = 'All Quarters') => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`http://localhost:5000/api/expenditures?quarter=${quarter}`);
+      if (!response.ok) throw new Error('Failed to fetch expenditures');
+      const data = await response.json();
+      setExpenditureData(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial fetch and refetch when quarter changes
+  useEffect(() => {
+    fetchExpenditures(selectedQuarter);
+  }, [selectedQuarter]);
+
+  // Filter data for display (client-side fallback if needed)
+  const filteredDetails = expenditureData.details.filter(category => 
+    category.items.length > 0
+  );
 
   // Calculate total expenditure for filtered data
   const totalExpenditure = filteredDetails.reduce(
@@ -104,91 +44,107 @@ function ExpenditureDetails() {
     0
   );
 
-  // Function to handle Excel import
+  // Handle Excel import
   const handleImportExcel = (event) => {
     const file = event.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = (e) => {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      reader.onload = async (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-        // Map Excel data to expenditureData format and append to existing data
-        const existingDetails = [...expenditureData.details];
-        const categoryMap = new Map(existingDetails.map(cat => [cat.category, cat.items]));
+          // Map Excel data to expenditureData format
+          const categoryMap = new Map();
+          jsonData.forEach(row => {
+            const category = row.Category;
+            const item = {
+              name: row.Item,
+              amount: parseFloat(String(row.Amount).replace(/₹|,/g, '')) || 0,
+              quarter: row.Quarter || 'All Quarters'
+            };
+            if (categoryMap.has(category)) {
+              categoryMap.get(category).items.push(item);
+            } else {
+              categoryMap.set(category, { category, items: [item] });
+            }
+          });
+          const newDetails = Array.from(categoryMap.values());
 
-        jsonData.forEach(row => {
-          const category = row.Category;
-          const item = {
-            name: row.Item,
-            amount: parseFloat(String(row.Amount).replace(/₹|,/g, '')) || 0,
-            quarter: row.Quarter || 'All Quarters'
-          };
-
-          if (categoryMap.has(category)) {
-            // Append item to existing category
-            categoryMap.get(category).push(item);
-          } else {
-            // Add new category with item
-            categoryMap.set(category, [item]);
-          }
-        });
-
-        // Convert map back to details array
-        const newDetails = Array.from(categoryMap, ([category, items]) => ({
-          category,
-          items
-        }));
-
-        setExpenditureData({ details: newDetails });
+          // Send to backend
+          const response = await fetch('http://localhost:5000/api/expenditures/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newDetails)
+          });
+          if (!response.ok) throw new Error('Failed to import expenditures');
+          await fetchExpenditures(selectedQuarter); // Refresh data
+        } catch (err) {
+          setError(err.message);
+        }
       };
       reader.readAsArrayBuffer(file);
-      // Reset file input to allow re-importing the same file or multiple files
-      event.target.value = null;
+      event.target.value = null; // Reset file input
     }
   };
 
-  // Function to export all expenditure data
-  const exportAllToExcel = () => {
-    const data = filteredDetails.flatMap(category =>
-      category.items.map(item => ({
-        Category: category.category,
-        Item: item.name,
-        Amount: `₹${item.amount.toLocaleString('en-IN')}`,
-        Quarter: item.quarter
-      }))
-    );
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Expenditure_Details');
-    XLSX.writeFile(workbook, `All_Expenditure_${selectedQuarter}.xlsx`);
+  // Handle Excel export
+  const exportAllToExcel = async () => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/expenditures/export?quarter=${selectedQuarter}`);
+      if (!response.ok) throw new Error('Failed to export expenditures');
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Expenditure_${selectedQuarter}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   // Handle edit form submission
-  const handleEditSubmit = (e) => {
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
-    if (editCategory && editedItem.name && !isNaN(editedItem.amount)) {
-      const updatedDetails = expenditureData.details.map(cat =>
-        cat.category === editCategory.category
-          ? { ...cat, items: cat.items.map(item =>
-              item.name === editCategory.item.name ? { ...editedItem, amount: parseFloat(editedItem.amount) } : item
-            )}
-          : cat
-      );
-      setExpenditureData({ details: updatedDetails });
-      setEditCategory(null);
-      setEditedItem({ name: '', amount: '', quarter: 'Mar-May' });
+    if (editItem && editedItem.name && !isNaN(editedItem.amount)) {
+      try {
+        const response = await fetch('http://localhost:5000/api/expenditures', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: editedItem.id,
+            updatedItem: { ...editedItem, amount: parseFloat(editedItem.amount) }
+          })
+        });
+        if (!response.ok) throw new Error('Failed to update expenditure');
+        await fetchExpenditures(selectedQuarter); // Refresh data
+        setEditItem(null);
+        setEditedItem({ id: '', name: '', amount: '', quarter: 'Mar-May' });
+      } catch (err) {
+        setError(err.message);
+      }
     }
   };
 
   // Handle delete confirmation
-  const handleDelete = (category) => {
+  const handleDelete = async (category) => {
     if (window.confirm(`Are you sure you want to delete the ${category.category} category?`)) {
-      const updatedDetails = expenditureData.details.filter(cat => cat.category !== category.category);
-      setExpenditureData({ details: updatedDetails });
+      try {
+        const response = await fetch(`http://localhost:5000/api/expenditures/${encodeURIComponent(category.category)}`, {
+          method: 'DELETE'
+        });
+        if (!response.ok) throw new Error('Failed to delete category');
+        await fetchExpenditures(selectedQuarter); // Refresh data
+      } catch (err) {
+        setError(err.message);
+      }
     }
   };
 
@@ -200,10 +156,15 @@ function ExpenditureDetails() {
           <button
             className="action-button"
             onClick={() => fileInputRef.current.click()}
+            disabled={loading}
           >
             Import from Excel
           </button>
-          <button className="action-button" onClick={exportAllToExcel}>
+          <button
+            className="action-button"
+            onClick={exportAllToExcel}
+            disabled={loading}
+          >
             Export Expenditure Report
           </button>
           <input
@@ -224,6 +185,7 @@ function ExpenditureDetails() {
               backgroundColor: 'white',
               color: '#1e293b'
             }}
+            disabled={loading}
           >
             <option value="All Quarters">All Quarters</option>
             <option value="Mar-May">Mar-May</option>
@@ -233,6 +195,8 @@ function ExpenditureDetails() {
           </select>
         </div>
       </div>
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+      {loading && <p>Loading...</p>}
       <div className="grid">
         <div className="card kpi-card">
           <h2>Total Expenditure</h2>
@@ -247,13 +211,6 @@ function ExpenditureDetails() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                 <h2>{category.category}</h2>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <FaEdit
-                    style={{ cursor: 'pointer', color: '#0a9396', fontSize: '16px' }}
-                    onClick={() => {
-                      setEditCategory({ category: category.category, item: category.items[0] });
-                      setEditedItem({ ...category.items[0] });
-                    }}
-                  />
                   <FaTrash
                     style={{ cursor: 'pointer', color: '#797979ff', fontSize: '16px' }}
                     onClick={() => handleDelete(category)}
@@ -266,22 +223,32 @@ function ExpenditureDetails() {
                     <tr>
                       <th>Item</th>
                       <th>Amount</th>
+                      <th>Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {category.items.map((item, index) => (
                       <tr
-                        key={index}
+                        key={item.id}
                         style={{ backgroundColor: index % 2 === 0 ? '#f8fafc' : 'white' }}
                       >
                         <td>{item.name}</td>
                         <td>₹{item.amount.toLocaleString('en-IN')}</td>
+                        <td>
+                          <FaEdit
+                            style={{ cursor: 'pointer', color: '#0a9396', fontSize: '16px' }}
+                            onClick={() => {
+                              setEditItem({...item, category: category.category });
+                              setEditedItem({ id: item.id, name: item.name, amount: item.amount, quarter: item.quarter });
+                            }}
+                          />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              {editCategory && editCategory.category === category.category && (
+              {editItem && editItem.category === category.category && (
                 <div style={{
                   position: 'absolute',
                   top: 0,
@@ -325,7 +292,7 @@ function ExpenditureDetails() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setEditCategory(null)}
+                        onClick={() => setEditItem(null)}
                         style={{ padding: '5px 10px', background: '#aecfeeff', color: 'white', border: 'none' }}
                       >
                         Cancel
