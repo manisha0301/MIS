@@ -11,6 +11,10 @@ const invoiceModel = require('./models/invoiceModel');
 const expenditureModel = require('./models/expenditureModel');
 const salesModel = require('./models/salesModel');
 const path = require('path');
+const authRoutes = require('./routes/userRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const userModel = require('./models/userModel');
+const bcrypt = require('bcryptjs');
 
 const app = express();
 
@@ -22,6 +26,8 @@ app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/invoices', invoiceRoutes);
@@ -31,11 +37,26 @@ app.use('/api/sales', salesRoutes);
 // Initialize database tables
 const initializeDatabase = async () => {
   try {
+    await userModel.createUsersTable();
     await productModel.createProductsTable();
     await customerModel.createCustomersTable();
     await invoiceModel.createInvoicesTable();
     await expenditureModel.createExpendituresTable();
     await salesModel.createSalesTables();
+
+    // Create default admin if not exists
+    const admin = await userModel.findUserByUsername("admin");
+    if (!admin) {
+      const hashedPassword = await bcrypt.hash("password", 10);
+      await userModel.createUser({
+        name: "Default Admin",
+        username: "admin",
+        password: hashedPassword,
+        role: "Admin",
+      });
+      console.log("✅ Default admin created (username=admin, password=password)");
+    }
+    
     console.log('Database initialized');
   } catch (error) {
     console.error('Error initializing database:', error);

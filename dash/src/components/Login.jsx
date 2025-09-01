@@ -8,14 +8,28 @@ function Login({ onLogin }) {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Mock authentication logic (replace with real API call if needed)
-    if (username === 'admin' && password === 'password') {
-      onLogin(); // Trigger the login handler to update authentication state
-      navigate('/'); // Redirect to dashboard
-    } else {
-      setError('Invalid username or password');
+    try {
+      const response = await fetch("http://localhost:5000/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Login failed");
+
+      // ✅ Save token in sessionStorage
+      sessionStorage.setItem("token", data.token);
+
+      // ✅ Save user info if you want (optional)
+      sessionStorage.setItem("user", JSON.stringify(data.user));
+
+      onLogin();  // mark as logged in
+      navigate("/");  // redirect to dashboard
+    } catch (err) {
+      setError(err.message);
     }
   };
 

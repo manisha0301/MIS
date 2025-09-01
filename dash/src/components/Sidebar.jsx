@@ -65,7 +65,17 @@ function Sidebar() {
             className={({ isActive }) => `sidebar-button ${isActive ? 'active' : ''}`}
             onClick={() => setIsOpen(false)}
           >
-            <FaFileInvoiceDollar style={{ marginRight: '8px' }} /> Admin
+            <FaUsers style={{ marginRight: '8px' }} /> Admin
+          </NavLink>
+          <NavLink
+            // to="/admin"
+            className={({ isActive }) => `sidebar-button ${isActive ? 'active' : ''}`}
+            onClick={() => {
+  sessionStorage.clear();
+  window.location.href = "/";
+}}
+          >
+            <FaUsers style={{ marginRight: '8px' }} /> Logout
           </NavLink>
         </div>
       </div>
