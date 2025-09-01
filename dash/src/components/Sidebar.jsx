@@ -60,6 +60,13 @@ function Sidebar() {
           >
             <FaFileInvoiceDollar style={{ marginRight: '8px' }} /> Invoices
           </NavLink>
+          <NavLink
+            to="/admin"
+            className={({ isActive }) => `sidebar-button ${isActive ? 'active' : ''}`}
+            onClick={() => setIsOpen(false)}
+          >
+            <FaFileInvoiceDollar style={{ marginRight: '8px' }} /> Admin
+          </NavLink>
         </div>
       </div>
     </>

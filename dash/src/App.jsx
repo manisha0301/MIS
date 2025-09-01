@@ -9,6 +9,7 @@ import ExpenditureDetails from './components/ExpenditureDetails.jsx';
 import InvoiceList from './components/InvoiceList.jsx';
 import Login from './components/Login.jsx';
 import './styles/dashboard.css';
+import Admin from './components/Admin.jsx';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -31,6 +32,7 @@ function App() {
                 <Route path="/sales-analytics" element={<SalesAnalytics />} />
                 <Route path="/expenditure" element={<ExpenditureDetails />} />
                 <Route path="/invoices" element={<InvoiceList />} />
+                <Route path="/admin" element={<Admin />} />
               </Routes>
             </div>
       </div>
