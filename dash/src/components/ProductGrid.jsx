@@ -108,13 +108,10 @@ function ProductGrid() {
         </div>
       )}
       <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', backgroundColor: '#f8fafc' }}>
-        <h1 style={{ color: '#1e293b', margin: 0 }}>Products</h1>
+        <h1 style={{ color: '#fff', margin: 0 }}>Products</h1>
         <button
           className="action-button"
-          style={{ backgroundColor: '#0a9396', color: 'white', padding: '10px 20px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', transition: 'background-color 0.3s' }}
           onClick={() => setIsFormOpen(true)}
-          onMouseOver={(e) => (e.target.style.backgroundColor = '#005f73')}
-          onMouseOut={(e) => (e.target.style.backgroundColor = '#0a9396')}
         >
           Add New Product
         </button>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Line, Pie } from 'react-chartjs-2';
 import { 
   Chart as ChartJS, 
@@ -23,52 +23,43 @@ ChartJS.register(
   ArcElement
 );
 
-// For demo purposes, using inline data
-const salesData = {
-  quarters: ['Mar-Apr-May 2024', 'Jun-Jul-Aug 2024', 'Sep-Oct-Nov 2024', 'Dec-Jan-Feb 2025', 'Mar-Apr-May 2025'],
-  directSales: [9960000, 12450000, 14940000, 16600000, 18000000],
-  institutionalSales: [6640000, 7470000, 8300000, 9130000, 9500000],
-  channelSales: [4150000, 4980000, 5810000, 6640000, 7000000],
-  hitMiss: {
-    hit: [75, 80, 85, 90, 88],
-    miss: [25, 20, 15, 10, 12]
-  },
-  achievedNotAchieved: {
-    achieved: [80, 85, 90, 95, 92],
-    notAchieved: [20, 15, 10, 5, 8]
-  },
-  targets: [16600000, 20750000, 24900000, 29050000, 31000000]
-};
-
-const forecastData = {
-  quarters: ['Mar-Apr-May 2024', 'Jun-Jul-Aug 2024', 'Sep-Oct-Nov 2024', 'Dec-Jan-Feb 2025', 'Mar-Apr-May 2025'],
-  revenueTargets: [16600000, 20750000, 24900000, 29050000, 31000000],
-  forecastedSales: [14940000, 19090000, 23240000, 27390000, 29500000]
-};
-
-const kpiData = {
-  totalRevenue: 53600000,
-  topProduct: 'ARMORED PHONE',
-  topState: 'NY'
-};
-
-const productData = [
-  { id: 1, name: 'ARMORED PHONE', price: 180000, category: 'Electronics', stock: 150, sales: 500, description: 'High-quality widget for enterprise solutions.', image: '/src/assets/Product1.png' },
-  { id: 2, name: 'SGA 10', price: 41417, category: 'Gadgets', stock: 200, sales: 300, description: 'Premium gadget with advanced features.', image: '/src/assets/Product2.png' },
-  { id: 3, name: 'SGA 100', price: 96517, category: 'Tools', stock: 120, sales: 400, description: 'Cost-effective tool for small businesses.', image: '/src/assets/Product3.png' },
-];
-
 const customerData = [
-  { id: 1, name: 'Acme Corp', contact: 'john@acme.com', state: 'CA', totalPurchases: 1245000, lastPurchaseDate: '2025-07-15' },
-  { id: 2, name: 'Beta Inc', contact: 'jane@beta.com', state: 'NY', totalPurchases: 1826000, lastPurchaseDate: '2025-07-20' },
-  { id: 3, name: 'Gamma LLC', contact: 'bob@gamma.com', state: 'TX', totalPurchases: 830000, lastPurchaseDate: '2025-07-10' },
-  { id: 4, name: 'Delta Co', contact: 'alice@delta.com', state: 'FL', totalPurchases: 950000, lastPurchaseDate: '2025-07-25' },
-  { id: 5, name: 'Epsilon Ltd', contact: 'charlie@epsilon.com', state: 'IL', totalPurchases: 600000, lastPurchaseDate: '2025-07-18' }
+  { id: 1,  state: 'CA', totalPurchases: 1245000 },
+  { id: 2,  state: 'NY', totalPurchases: 1826000 },
+  { id: 3, state: 'TX', totalPurchases: 830000 },
+  { id: 4, state: 'FL', totalPurchases: 950000 },
+  { id: 5, state: 'IL', totalPurchases: 600000 }
 ];
 
 function SalesChart({ filter, quarter }) {
+  const [salesData, setSalesData] = useState({
+    quarters: [],
+    directSales: [],
+    institutionalSales: [],
+    channelSales: [],
+    hitMiss: { hit: [], miss: [] },
+    achievedNotAchieved: { achieved: [], notAchieved: [] },
+    targets: []
+  });
+
+  useEffect(() => {
+    const fetchSalesData = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/sales');
+        if (!response.ok) {
+          throw new Error('Failed to fetch sales data');
+        }
+        const data = await response.json();
+        setSalesData(data.salesData);
+      } catch (error) {
+        console.error('Error fetching sales data:', error);
+      }
+    };
+    fetchSalesData();
+  }, []);
+
   const labels = quarter && quarter !== 'all' ? [quarter] : salesData.quarters;
-  
+
   const data = {
     labels,
     datasets: [
@@ -196,10 +187,70 @@ function SalesChart({ filter, quarter }) {
 }
 
 function SalesAnalytics() {
+  const [salesData, setSalesData] = useState({
+    quarters: [],
+    directSales: [],
+    institutionalSales: [],
+    channelSales: [],
+    hitMiss: { hit: [], miss: [] },
+    achievedNotAchieved: { achieved: [], notAchieved: [] },
+    targets: []
+  });
+  const [forecastData, setForecastData] = useState({
+    quarters: [],
+    revenueTargets: [],
+    forecastedSales: []
+  });
+  const [customerData, setCustomerData] = useState([]);
   const [filter, setFilter] = useState('all');
-  const [selectedQuarter, setSelectedQuarter] = useState('Mar-Apr-May 2025');
+  const [selectedQuarter, setSelectedQuarter] = useState('');
   const [showForecastModal, setShowForecastModal] = useState(false);
   const [showInsights, setShowInsights] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [newQuarterData, setNewQuarterData] = useState({
+    quarter: '',
+    directSales: '',
+    institutionalSales: '',
+    channelSales: '',
+    hit: '',
+    achieved: '',
+    target: '',
+    forecastedSales: ''
+  });
+  const [notification, setNotification] = useState({ message: '', visible: false });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('http://localhost:5000/api/sales');
+        if (!response.ok) {
+          throw new Error('Failed to fetch sales data');
+        }
+        const data = await response.json();
+        console.log('Fetched sales data:', data);
+        setSalesData(data.salesData);
+        setForecastData(data.forecastData);
+        if (data.salesData.quarters.length > 0) {
+          setSelectedQuarter(data.salesData.quarters[data.salesData.quarters.length - 1]);
+        }
+        const customersResponse = await fetch('http://localhost:5000/api/customers');
+        if (!customersResponse.ok) {
+          throw new Error('Failed to fetch customer data');
+        }
+        const customers = await customersResponse.json();
+        console.log('Fetched customer data:', customers);
+        setCustomerData(customers);
+        setLoading(false);
+      } catch (err) {
+        setError(err.message);
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const quarterIndex = salesData.quarters.indexOf(selectedQuarter);
   const totalSalesTarget = quarterIndex !== -1 ? salesData.targets[quarterIndex] : 0;
@@ -207,11 +258,8 @@ function SalesAnalytics() {
   const hitPercentage = quarterIndex !== -1 ? salesData.hitMiss.hit[quarterIndex] : 50;
   const missPercentage = quarterIndex !== -1 ? salesData.hitMiss.miss[quarterIndex] : 50;
 
-  const totalCustomerValue = customerData.reduce((sum, customer) => sum + customer.totalPurchases, 0);
-  const topCustomer = customerData.reduce((max, customer) => 
-    customer.totalPurchases > max.totalPurchases ? customer : max
-  , customerData[0]);
-  
+  const totalCustomerValue = customerData.reduce((sum, customer) => sum + (parseFloat(customer.total_purchases) || 0), 0);  
+
   const quarterGrowth = quarterIndex > 0 ? 
     ((actualSales - (salesData.directSales[quarterIndex - 1] + salesData.institutionalSales[quarterIndex - 1] + salesData.channelSales[quarterIndex - 1])) 
     / (salesData.directSales[quarterIndex - 1] + salesData.institutionalSales[quarterIndex - 1] + salesData.channelSales[quarterIndex - 1]) * 100).toFixed(1) 
@@ -285,13 +333,136 @@ function SalesAnalytics() {
     }
   };
 
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewQuarterData({ ...newQuarterData, [name]: value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (
+      !newQuarterData.quarter ||
+      !newQuarterData.directSales ||
+      !newQuarterData.institutionalSales ||
+      !newQuarterData.channelSales ||
+      !newQuarterData.hit ||
+      !newQuarterData.achieved ||
+      !newQuarterData.target ||
+      !newQuarterData.forecastedSales
+    ) {
+      setNotification({ message: 'Please fill all fields.', visible: true });
+      setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+      return;
+    }
+
+    const hitNum = parseFloat(newQuarterData.hit);
+    const achievedNum = parseFloat(newQuarterData.achieved);
+    if (isNaN(hitNum) || hitNum < 0 || hitNum > 100 || isNaN(achievedNum) || achievedNum < 0 || achievedNum > 100) {
+      setNotification({ message: 'Hit and Achieved percentages must be between 0 and 100.', visible: true });
+      setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:5000/api/sales', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          quarter: newQuarterData.quarter,
+          direct_sales: parseFloat(newQuarterData.directSales),
+          institutional_sales: parseFloat(newQuarterData.institutionalSales),
+          channel_sales: parseFloat(newQuarterData.channelSales),
+          hit_percentage: hitNum,
+          achieved_percentage: achievedNum,
+          target: parseFloat(newQuarterData.target),
+          forecasted_sales: parseFloat(newQuarterData.forecastedSales)
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add sales data');
+      }
+
+      const newData = await response.json();
+      // Update local state with new data
+      const fetchData = async () => {
+        const res = await fetch('http://localhost:5000/api/sales');
+        if (res.ok) {
+          const data = await res.json();
+          setSalesData(data.salesData);
+          setForecastData(data.forecastData);
+          setSelectedQuarter(newQuarterData.quarter);
+        }
+      };
+      fetchData();
+      setNotification({ message: 'Sales data added successfully!', visible: true });
+      setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+      setNewQuarterData({
+        quarter: '',
+        directSales: '',
+        institutionalSales: '',
+        channelSales: '',
+        hit: '',
+        achieved: '',
+        target: '',
+        forecastedSales: ''
+      });
+      setIsFormOpen(false);
+    } catch (error) {
+      setNotification({ message: error.message, visible: true });
+      setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+    }
+  };
+
+  const handleExport = () => {
+    if (salesData.quarters.length === 0) {
+      setNotification({ message: 'No data to export', visible: true });
+      setTimeout(() => setNotification({ message: '', visible: false }), 3000);
+      return;
+    }
+    const headers = [
+      'Quarter',
+      'Direct Sales (₹)',
+      'Institutional Sales (₹)',
+      'Channel Sales (₹)',
+      'Hit Percentage (%)',
+      'Achieved Percentage (%)',
+      'Target (₹)',
+      'Forecasted Sales (₹)'
+    ];
+    const rows = salesData.quarters.map((quarter, index) => [
+      quarter,
+      salesData.directSales[index].toLocaleString('en-IN'),
+      salesData.institutionalSales[index].toLocaleString('en-IN'),
+      salesData.channelSales[index].toLocaleString('en-IN'),
+      salesData.hitMiss.hit[index],
+      salesData.achievedNotAchieved.achieved[index],
+      salesData.targets[index].toLocaleString('en-IN'),
+      forecastData.forecastedSales[index].toLocaleString('en-IN')
+    ]);
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'sales_analytics_data.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setNotification({ message: 'Data exported successfully', visible: true });
+    setTimeout(() => setNotification({ message: '', visible: false }), 3000);
+  };
+
+  // The rest of the JSX remains unchanged
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      backgroundColor: '#f8fafc', 
-      padding: '16px',
-      fontFamily: 'system-ui, -apple-system, sans-serif'
-    }}>
+    <div style={{ background: '#f8fafc', minHeight: '100vh' }}>
       {/* Header */}
       <div style={{
         background: 'linear-gradient(135deg, #005f73, #0a9396)',
@@ -358,13 +529,38 @@ function SalesAnalytics() {
               ₹{(actualSales/10000000).toFixed(1)}Cr
             </div>
           </div>
+          <button
+            onClick={() => setIsFormOpen(true)}
+            className='action-button'
+          >
+            Add Sales Data
+          </button>
         </div>
       </div>
 
-      {/* Enhanced Main Grid */}
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', 
+      {loading && <div>Loading...</div>}
+      {error && <div style={{ color: 'red' }}>{error}</div>}
+      {notification.visible && (
+        <div style={{
+          minHeight: '100vh',
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          padding: '16px',
+          backgroundColor: notification.message.includes('successfully') ? '#d4edda' : '#f8d7da',
+          color: notification.message.includes('successfully') ? '#155724' : '#721c24',
+          borderRadius: '6px',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          zIndex: 1000,
+          fontFamily: 'system-ui, -apple-system, sans-serif'
+        }}>
+          {notification.message}
+        </div>
+      )}
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
         gap: '20px',
         marginBottom: '20px',
         background: 'linear-gradient(135deg, #ffffff, #f9fafb)',
@@ -428,10 +624,11 @@ function SalesAnalytics() {
                 {label}
               </button>
             ))}
-          </div>
+            </div>
           
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button style={{
+            <button 
+            style={{
               padding: '8px 16px',
               fontSize: '12px',
               fontWeight: '600',
@@ -441,27 +638,12 @@ function SalesAnalytics() {
               color: 'white',
               cursor: 'pointer',
               transition: 'all 0.2s ease'
-            }}>
+            }}
+            onClick={handleExport}>
               Export Data
             </button>
-            <button 
-              onClick={() => setShowInsights(!showInsights)}
-              style={{
-                padding: '8px 16px',
-                fontSize: '12px',
-                fontWeight: '600',
-                border: '1px solid #0a9396',
-                borderRadius: '6px',
-                backgroundColor: showInsights ? '#0a9396' : 'transparent',
-                color: showInsights ? 'white' : '#0a9396',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              Insights
-            </button>
           </div>
-        </div>
+          </div>
 
         {/* Hit/Miss Chart */}
         <div style={{
@@ -479,7 +661,7 @@ function SalesAnalytics() {
               marginBottom: '4px' 
             }}>
               Target Achievement
-            </h2>
+          </h2>
             <p style={{ color: '#64748b', fontSize: '13px', margin: 0 }}>
               {selectedQuarter} - Trend: {trendDirection === 'up' ? '📈' : '📉'} {avgHitRate.toFixed(1)}% avg
             </p>
@@ -491,7 +673,7 @@ function SalesAnalytics() {
             {/* Center text overlay */}
             <div style={{
               position: 'absolute',
-              top: '50%',
+              top: '40%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
               textAlign: 'center',
@@ -499,7 +681,7 @@ function SalesAnalytics() {
             }}>
               <div style={{ fontSize: '20px', fontWeight: '700', color: '#0a2552ff' }}>
                 {hitPercentage}%
-              </div>
+          </div>
               <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>
                 Achievement
               </div>
@@ -541,74 +723,6 @@ function SalesAnalytics() {
           </div>
         </div>
 
-        {/* Insights Panel */}
-        {showInsights && (
-          <div style={{
-            background: 'white',
-            borderRadius: '12px',
-            padding: '20px',
-            boxShadow: '0 2px 12px rgba(0, 0, 0, 0.06)',
-            border: '1px solid #e2e8f0',
-            gridColumn: 'span 2'
-          }}>
-            <h3 style={{ 
-              fontSize: '18px', 
-              fontWeight: '700', 
-              color: '#1e293b', 
-              marginBottom: '16px' 
-            }}>
-              📊 AI-Powered Insights
-            </h3>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
-              <div style={{
-                padding: '16px',
-                backgroundColor: '#f0f9ff',
-                borderRadius: '8px',
-                borderLeft: '4px solid #0369a1'
-              }}>
-                <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#0369a1', marginBottom: '8px' }}>
-                  Performance Trend
-                </h4>
-                <p style={{ fontSize: '13px', color: '#1e293b', margin: 0 }}>
-                  Sales are trending {trendDirection === 'up' ? 'upward' : 'downward'} with {quarterGrowth > 0 ? 'a' : 'a'} {Math.abs(quarterGrowth)}% change from last quarter. 
-                  {quarterGrowth > 10 ? ' Excellent growth momentum!' : quarterGrowth > 0 ? ' Steady improvement.' : ' Focus needed on growth strategies.'}
-                </p>
-              </div>
-              
-              <div style={{
-                padding: '16px',
-                backgroundColor: '#f0fdf4',
-                borderRadius: '8px',
-                borderLeft: '4px solid #16a34a'
-              }}>
-                <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#16a34a', marginBottom: '8px' }}>
-                  Customer Insights
-                </h4>
-                <p style={{ fontSize: '13px', color: '#1e293b', margin: 0 }}>
-                  Top customer {topCustomer.name} contributes ₹{(topCustomer.totalPurchases/100000).toFixed(1)}L ({((topCustomer.totalPurchases/totalCustomerValue)*100).toFixed(1)}% of total customer value). 
-                  Focus on similar high-value prospects.
-                </p>
-              </div>
-              
-              <div style={{
-                padding: '16px',
-                backgroundColor: '#fefce8',
-                borderRadius: '8px',
-                borderLeft: '4px solid #ca8a04'
-              }}>
-                <h4 style={{ fontSize: '14px', fontWeight: '600', color: '#ca8a04', marginBottom: '8px' }}>
-                  Target Analysis
-                </h4>
-                <p style={{ fontSize: '13px', color: '#1e293b', margin: 0 }}>
-                  Current achievement rate is {hitPercentage}%. To improve, focus on {hitPercentage < 85 ? 'institutional sales' : 'channel partnerships'} 
-                  {hitPercentage < 80 ? ' and direct customer acquisition.' : '.'}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Enhanced Sales Forecast Card */}
         <div style={{
           background: 'linear-gradient(135deg, #f1f5f9, #e2e8f0)',
@@ -631,16 +745,6 @@ function SalesAnalytics() {
               <p style={{ opacity: 0.7, fontSize: '13px', margin: 0 }}>
                 Next Quarter: ₹{(nextQuarterForecast/10000000).toFixed(1)}Cr projected
               </p>
-            </div>
-            <div style={{
-              padding: '10px 14px',
-              backgroundColor: 'rgba(10, 147, 150, 0.1)',
-              borderRadius: '6px',
-              fontSize: '12px',
-              fontWeight: '600',
-              color: '#0a9396'
-            }}>
-              Confidence: 92%
             </div>
           </div>
           
@@ -703,144 +807,168 @@ function SalesAnalytics() {
               </div>
             </div>
           </div>
-          
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button 
-              onClick={() => setShowForecastModal(true)}
-              style={{
-                padding: '10px 18px',
-                fontSize: '12px',
-                fontWeight: '600',
-                border: '2px solid #0a9396',
-                borderRadius: '6px',
-                backgroundColor: 'transparent',
-                color: '#0a9396',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              Adjust Forecast Parameters
-            </button>
-            <button style={{
-              padding: '10px 18px',
-              fontSize: '12px',
-              fontWeight: '600',
-              border: 'none',
-              borderRadius: '6px',
-              backgroundColor: '#0a9396',
-              color: 'white',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}>
-              Generate Report
-            </button>
-          </div>
         </div>
-      </div>
 
-      {/* Forecast Modal */}
-      {showForecastModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
+        {/* Form for adding new quarter data */}
+        {isFormOpen && (
           <div style={{
-            background: 'white',
-            borderRadius: '12px',
-            padding: '24px',
-            maxWidth: '400px',
-            width: '90%',
-            maxHeight: '80vh',
-            overflow: 'auto'
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000
           }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>
-              Adjust Forecast Parameters
-            </h3>
-            
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-                Growth Rate (%)
-              </label>
-              <input 
-                type="range" 
-                min="0" 
-                max="20" 
-                defaultValue="8.5"
-                style={{ width: '100%', marginBottom: '8px' }}
-              />
-              <div style={{ fontSize: '12px', color: '#64748b' }}>Current: 8.5%</div>
-            </div>
-            
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-                Confidence Level (%)
-              </label>
-              <input 
-                type="range" 
-                min="70" 
-                max="95" 
-                defaultValue="92"
-                style={{ width: '100%', marginBottom: '8px' }}
-              />
-              <div style={{ fontSize: '12px', color: '#64748b' }}>Current: 92%</div>
-            </div>
-            
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
-                Market Conditions
-              </label>
-              <select style={{ 
-                width: '100%', 
-                padding: '8px', 
-                borderRadius: '6px', 
-                border: '1px solid #e2e8f0' 
-              }}>
-                <option>Optimistic</option>
-                <option>Realistic</option>
-                <option>Conservative</option>
-              </select>
-            </div>
-            
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-              <button 
-                onClick={() => setShowForecastModal(false)}
-                style={{
-                  padding: '8px 16px',
-                  fontSize: '14px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '6px',
-                  backgroundColor: 'white',
-                  cursor: 'pointer'
-                }}
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={() => setShowForecastModal(false)}
-                style={{
-                  padding: '8px 16px',
-                  fontSize: '14px',
-                  border: 'none',
-                  borderRadius: '6px',
-                  backgroundColor: '#0a9396',
-                  color: 'white',
-                  cursor: 'pointer'
-                }}
-              >
-                Apply Changes
-              </button>
+            <div style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '24px',
+              maxWidth: '500px',
+              width: '90%',
+              maxHeight: '80vh',
+              overflow: 'auto'
+            }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '700', marginBottom: '16px' }}>
+                Add New Quarter Data
+              </h3>
+              <form onSubmit={handleSubmit}>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+                    Quarter
+                  </label>
+                  <input
+                    type="text"
+                    name="quarter"
+                    value={newQuarterData.quarter}
+                    onChange={handleInputChange}
+                    placeholder="e.g., Jun-Jul-Aug 2025"
+                    style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}
+                  />
+                </div>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+                    Direct Sales (₹)
+                  </label>
+                  <input
+                    type="number"
+                    name="directSales"
+                    value={newQuarterData.directSales}
+                    onChange={handleInputChange}
+                    style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}
+                  />
+                </div>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+                    Institutional Sales (₹)
+                  </label>
+                  <input
+                    type="number"
+                    name="institutionalSales"
+                    value={newQuarterData.institutionalSales}
+                    onChange={handleInputChange}
+                    style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}
+                  />
+                </div>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+                    Channel Sales (₹)
+                  </label>
+                  <input
+                    type="number"
+                    name="channelSales"
+                    value={newQuarterData.channelSales}
+                    onChange={handleInputChange}
+                    style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}
+                  />
+                </div>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+                    Hit Percentage (%)
+                  </label>
+                  <input
+                    type="number"
+                    name="hit"
+                    value={newQuarterData.hit}
+                    onChange={handleInputChange}
+                    style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}
+                  />
+                </div>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+                    Achieved Percentage (%)
+                  </label>
+                  <input
+                    type="number"
+                    name="achieved"
+                    value={newQuarterData.achieved}
+                    onChange={handleInputChange}
+                    style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}
+                  />
+                </div>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+                    Target (₹)
+                  </label>
+                  <input
+                    type="number"
+                    name="target"
+                    value={newQuarterData.target}
+                    onChange={handleInputChange}
+                    style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}
+                  />
+                </div>
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', marginBottom: '8px' }}>
+                    Forecasted Sales (₹)
+                  </label>
+                  <input
+                    type="number"
+                    name="forecastedSales"
+                    value={newQuarterData.forecastedSales}
+                    onChange={handleInputChange}
+                    style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #e2e8f0' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsFormOpen(false)}
+                    style={{
+                      padding: '8px 16px',
+                      fontSize: '14px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      backgroundColor: 'white',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    style={{
+                      padding: '8px 16px',
+                      fontSize: '14px',
+                      border: 'none',
+                      borderRadius: '6px',
+                      backgroundColor: '#0a9396',
+                      color: 'white',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Submit
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
-        </div>
-      )}
+        )}
+
+      </div>
     </div>
   );
 }

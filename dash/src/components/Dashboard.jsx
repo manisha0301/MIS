@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import SalesChart from './SalesChart.jsx';
 import ExpenditureChart from './ExpenditureChart.jsx';
 import ForecastCard from '/src/components/ForecastCard.jsx';
@@ -11,6 +11,33 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 
 function Dashboard() {
   const [showNotifications, setShowNotifications] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [topProduct, setTopProduct] = useState('');
+  const [salesData, setSalesData] = useState({
+    quarters: [],
+    directSales: [],
+    institutionalSales: [],
+    channelSales: [],
+    hitMiss: { hit: [], miss: [] },
+    achievedNotAchieved: { achieved: [], notAchieved: [] },
+    targets: []
+  });
+  const [forecastData, setForecastData] = useState({
+    quarters: [],
+    revenueTargets: [],
+    forecastedSales: []
+  });
+  const [customerPurchasesData, setCustomerPurchasesData] = useState({
+    labels: [],
+    datasets: [{
+      label: 'Purchases (₹)',
+      data: [],
+      backgroundColor: '#0a9396',
+      borderColor: '#005f73',
+      borderWidth: 1
+    }]
+  });
   const notifications = [
     { id: 1, message: 'Sales target missed for Q3', unread: true },
     { id: 2, message: 'New customer added: Delta Corp', unread: false },
@@ -41,19 +68,6 @@ function Dashboard() {
     ]
   };
 
-  const customerPurchasesData = {
-    labels: ['Maharashtra', 'Uttar Pradesh', 'Tamil Nadu', 'Kerala', 'West Bengal'],
-    datasets: [
-      {
-        label: 'Purchases (₹)',
-        data: [5000000, 4500000, 3000000, 2500000, 2000000],
-        backgroundColor: '#0a9396',
-        borderColor: '#005f73',
-        borderWidth: 1
-      }
-    ]
-  };
-
   const options = {
     responsive: true,
     maintainAspectRatio: false,
@@ -71,17 +85,103 @@ function Dashboard() {
     }
   };
 
+  useEffect(() => {
+    const fetchSalesData = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('http://localhost:5000/api/sales');
+        if (!response.ok) {
+          throw new Error('Failed to fetch sales data');
+        }
+        const { salesData: fetchedSalesData, forecastData: fetchedForecastData } = await response.json();
+        setSalesData(fetchedSalesData);
+        setForecastData(fetchedForecastData);
+      } catch (err) {
+        setError(err.message);
+      }
+    };
+
+    const fetchCustomerData = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/customers');
+        if (!response.ok) {
+          throw new Error('Failed to fetch customer data');
+        }
+        const customers = await response.json();
+
+        // Aggregate total purchases by state
+        const statePurchases = customers.reduce((acc, customer) => {
+          const state = customer.state;
+          const purchases = parseFloat(customer.total_purchases) || 0;
+          acc[state] = (acc[state] || 0) + purchases;
+          return acc;
+        }, {});
+
+        // Prepare data for the chart
+        const labels = Object.keys(statePurchases);
+        const data = Object.values(statePurchases);
+
+        setCustomerPurchasesData({
+          labels,
+          datasets: [{
+            label: 'Purchases (₹)',
+            data,
+            backgroundColor: '#0a9396',
+            borderColor: '#005f73',
+            borderWidth: 1
+          }]
+        });
+      } catch (err) {
+        setError(err.message);
+      }
+    };
+
+    const fetchTopProduct = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/products');
+        if (!response.ok) {
+          throw new Error('Failed to fetch products');
+        }
+        const products = await response.json();
+        if (products.length > 0) {
+          const highestPricedProduct = products.reduce((max, product) =>
+            parseFloat(product.price) > parseFloat(max.price) ? product : max, products[0]);
+          setTopProduct(highestPricedProduct.name);
+        } else {
+          setTopProduct('N/A');
+        }
+      } catch (err) {
+        console.error('Error fetching top product:', err);
+        setTopProduct('N/A');
+      }
+    };
+
+    const fetchAllData = async () => {
+      try {
+        await Promise.all([fetchSalesData(), fetchCustomerData(), fetchTopProduct()]);
+        setLoading(false);
+      } catch (err) {
+        setError('Failed to load data');
+        setLoading(false);
+      }
+    };
+
+    fetchAllData();
+  }, []);
+
   const totalSales = salesData.quarters.reduce((sum, _, i) => sum + (salesData.directSales[i] + salesData.institutionalSales[i] + salesData.channelSales[i]), 0);
   const totalExpenditure = 17230000;
-  const profitMargin = ((totalSales - totalExpenditure) / totalSales * 100).toFixed(2);
-  const topState = customerPurchasesData.labels.reduce((maxState, state, i) => 
-    customerPurchasesData.datasets[0].data[i] > (customerPurchasesData.datasets[0].data[maxState.index] || 0) ? { index: i, name: state } : maxState, { index: 0, name: customerPurchasesData.labels[0] }).name;
-  const topProduct = 'ARMORED PHONE';
-
+  const profitMargin = totalSales ? ((totalSales - totalExpenditure) / totalSales * 100).toFixed(2) : 0;
+  const topState = customerPurchasesData.labels.length > 0
+    ? customerPurchasesData.labels.reduce((maxState, state, i) =>
+        customerPurchasesData.datasets[0].data[i] > (customerPurchasesData.datasets[0].data[maxState.index] || 0)
+          ? { index: i, name: state }
+          : maxState, { index: 0, name: customerPurchasesData.labels[0] }).name
+    : 'N/A';
   const quarterlySales = salesData.quarters.map((_, i) => salesData.directSales[i] + salesData.institutionalSales[i] + salesData.channelSales[i]);
   const growthRates = quarterlySales.slice(1).map((current, i) => ((current - quarterlySales[i]) / quarterlySales[i] * 100).toFixed(2));
-  const averageGrowthRate = growthRates.reduce((sum, rate) => sum + parseFloat(rate), 0) / growthRates.length || 0;
-
+  const averageGrowthRate = growthRates.length > 0 ? growthRates.reduce((sum, rate) => sum + parseFloat(rate), 0) / growthRates.length : 0;
+  
   return (
     <div className="dashboard">
       <div className="header">
@@ -158,7 +258,7 @@ function Dashboard() {
       <div className="grid grid-large" style={{ gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
         <div className="card">
           <h2>Sales Performance (All Quarters)</h2>
-          <SalesChart filter="all" />
+          <SalesChart filter="all" salesData={salesData} />
         </div>
         <div className="card">
           <h2>Total Sales Target vs. Achieved</h2>
@@ -178,13 +278,15 @@ function Dashboard() {
         </div>
         <div className="card forecast-card" style={{ gridColumn: 'span 2' }}>
           <h2>Sales Forecast</h2>
-          <ForecastCard />
+          <ForecastCard forecastData={forecastData} />
         </div>
         <div className="card kpi-card" style={{ height: '200px' }}>
           <h2>Sales Target Achievement</h2>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
             <p style={{ fontSize: '24px', fontWeight: '600', color: '#1e293b' }}>
-              {salesData.achievedNotAchieved.achieved.reduce((a, b) => a + b, 0) / salesData.achievedNotAchieved.achieved.length}%
+              {salesData.achievedNotAchieved.achieved.length > 0
+                ? (salesData.achievedNotAchieved.achieved.reduce((a, b) => a + b, 0) / salesData.achievedNotAchieved.achieved.length).toFixed(2)
+                : 0}%
             </p>
           </div>
         </div>
@@ -192,7 +294,7 @@ function Dashboard() {
           <h2>Expenditure-to-Sales Ratio</h2>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
             <p style={{ fontSize: '24px', fontWeight: '600', color: '#1e293b' }}>
-              {(totalExpenditure / totalSales * 100).toFixed(2)}%
+              {totalSales ? (totalExpenditure / totalSales * 100).toFixed(2) : 0}%
             </p>
           </div>
         </div>

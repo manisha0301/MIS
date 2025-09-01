@@ -1,10 +1,9 @@
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
-import { forecastData } from '/src/data/mockData';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-function ForecastCard() {
+function ForecastCard({ forecastData }) {
   const data = {
     labels: forecastData.quarters,
     datasets: [

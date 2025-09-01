@@ -150,7 +150,7 @@ function ExpenditureDetails() {
 
   return (
     <div className="dashboard">
-      <div className="header" style={{ padding: '12px' }}>
+      <div className="header" style={{ padding: '20px' }}>
         <h1 style={{ fontSize: '24px' }}>Expenditure Details</h1>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <button

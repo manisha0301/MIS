@@ -4,10 +4,12 @@ const productRoutes = require('./routes/productRoutes');
 const customerRoutes = require('./routes/customerRoutes');
 const invoiceRoutes = require('./routes/invoiceRoutes');
 const expenditureRoutes = require('./routes/expenditureRoutes');
+const salesRoutes = require('./routes/salesRoutes');
 const productModel = require('./models/productModel');
 const customerModel = require('./models/customerModel');
 const invoiceModel = require('./models/invoiceModel');
 const expenditureModel = require('./models/expenditureModel');
+const salesModel = require('./models/salesModel');
 const path = require('path');
 
 const app = express();
@@ -24,6 +26,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/expenditures', expenditureRoutes);
+app.use('/api/sales', salesRoutes);
 
 // Initialize database tables
 const initializeDatabase = async () => {
@@ -32,6 +35,7 @@ const initializeDatabase = async () => {
     await customerModel.createCustomersTable();
     await invoiceModel.createInvoicesTable();
     await expenditureModel.createExpendituresTable();
+    await salesModel.createSalesTables();
     console.log('Database initialized');
   } catch (error) {
     console.error('Error initializing database:', error);
