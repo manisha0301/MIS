@@ -54,7 +54,9 @@ const response = await fetch('http://localhost:5000/api/admin/users', {
     'Content-Type': 'application/json',
     'Authorization': `Bearer ${token}`
   },
+  body: JSON.stringify(newUser)   // <-- send form data
 });
+
 
       const data = await response.json();
       if (!response.ok) {
@@ -381,7 +383,7 @@ const response = await fetch('http://localhost:5000/api/admin/users', {
                   >
                     <option value="User">User</option>
                     <option value="Admin">Admin</option>
-                    <option value="Admin">Super-Admin</option>
+                    <option value="Super-Admin">Super-Admin</option>
                   </select>
                 </div>
 

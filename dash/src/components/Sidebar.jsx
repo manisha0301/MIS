@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { FaHome, FaBox, FaUsers, FaChartLine, FaDollarSign, FaTachometerAlt, FaFileInvoiceDollar } from 'react-icons/fa';
+import { FaHome, FaBox, FaUsers, FaChartLine, FaDollarSign, FaFileInvoiceDollar, FaUser, } from 'react-icons/fa';
 import logo from '../assets/logo.png';
 
 function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
+  const user = JSON.parse(sessionStorage.getItem("user"));
 
   const toggleSidebar = () => setIsOpen(!isOpen);
 
@@ -60,23 +61,15 @@ function Sidebar() {
           >
             <FaFileInvoiceDollar style={{ marginRight: '8px' }} /> Invoices
           </NavLink>
+          {user && (user.role === 'Admin' || user.role === 'Super-Admin') && (
           <NavLink
             to="/admin"
             className={({ isActive }) => `sidebar-button ${isActive ? 'active' : ''}`}
             onClick={() => setIsOpen(false)}
           >
-            <FaUsers style={{ marginRight: '8px' }} /> Admin
+            <FaUser style={{ marginRight: '8px' }} /> Admin
           </NavLink>
-          <NavLink
-            // to="/admin"
-            className={({ isActive }) => `sidebar-button ${isActive ? 'active' : ''}`}
-            onClick={() => {
-  sessionStorage.clear();
-  window.location.href = "/";
-}}
-          >
-            <FaUsers style={{ marginRight: '8px' }} /> Logout
-          </NavLink>
+          )}
         </div>
       </div>
     </>

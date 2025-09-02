@@ -10,6 +10,7 @@ function CustomerList() {
     state: '',
     totalPurchases: 0
   });
+  const user = JSON.parse(sessionStorage.getItem("user"));
 
   useEffect(() => {
     // Fetch customers from backend
@@ -186,12 +187,14 @@ function CustomerList() {
       <div className="dashboard">
         <div className="header">
           <h1>Customers</h1>
+          {user && user.role === 'Admin' && (
           <button 
             onClick={() => setShowModal(true)}
             className="action-button"
           >
             Add New Customer
           </button>
+          )}
         </div>
 
         <div className="customer-list">

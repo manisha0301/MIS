@@ -3,7 +3,7 @@ import SalesChart from './SalesChart.jsx';
 import ExpenditureChart from './ExpenditureChart.jsx';
 import ForecastCard from '/src/components/ForecastCard.jsx';
 import { salesData, customerPurchasesByState } from '/src/data/mockData';
-import { FaBell } from 'react-icons/fa';
+import { FaBell, FaSignOutAlt } from 'react-icons/fa';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 
@@ -187,29 +187,17 @@ function Dashboard() {
       <div className="header">
         <h1>MIS</h1>
         <div className="notification-container">
-          <div style={{ position: 'relative' }}>
-            <FaBell className="notification-bell" onClick={() => setShowNotifications(!showNotifications)} />
-            {unreadCount > 0 && (
-              <span
-                style={{
-                  position: 'absolute',
-                  top: '-8px',
-                  right: '-8px',
-                  backgroundColor: '#aecfeeff',
-                  color: 'white',
-                  borderRadius: '50%',
-                  width: '16px',
-                  height: '16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '10px',
-                  fontWeight: '600'
-                }}
-              >
-                {unreadCount}
-              </span>
-            )}
+          <div 
+          style={{ position: 'relative', alignItems: 'center', cursor: 'pointer', justifyContent: 'center', display: 'flex', gap: '8px' }}
+          onClick={() => {
+            sessionStorage.clear();
+            window.location.href = "/";
+          }}
+          >
+            <FaSignOutAlt 
+            className="notification-bell"
+             />
+            Logout
           </div>
           {showNotifications && (
             <div className="notification-dropdown">

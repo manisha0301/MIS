@@ -6,6 +6,7 @@ function ProductGrid() {
   const [previewImage, setPreviewImage] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [notification, setNotification] = useState({ message: '', visible: false });
+  const user = JSON.parse(sessionStorage.getItem("user"));
 
   useEffect(() => {
     fetch('http://localhost:5000/api/products')
@@ -109,12 +110,14 @@ function ProductGrid() {
       )}
       <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', backgroundColor: '#f8fafc' }}>
         <h1 style={{ color: '#fff', margin: 0 }}>Products</h1>
+        {user && user.role === 'Admin' && (
         <button
           className="action-button"
           onClick={() => setIsFormOpen(true)}
         >
           Add New Product
         </button>
+        )}
       </div>
       {isFormOpen && (
         <div style={{

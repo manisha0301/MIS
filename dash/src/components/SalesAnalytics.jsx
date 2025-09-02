@@ -23,14 +23,6 @@ ChartJS.register(
   ArcElement
 );
 
-const customerData = [
-  { id: 1,  state: 'CA', totalPurchases: 1245000 },
-  { id: 2,  state: 'NY', totalPurchases: 1826000 },
-  { id: 3, state: 'TX', totalPurchases: 830000 },
-  { id: 4, state: 'FL', totalPurchases: 950000 },
-  { id: 5, state: 'IL', totalPurchases: 600000 }
-];
-
 function SalesChart({ filter, quarter }) {
   const [salesData, setSalesData] = useState({
     quarters: [],
@@ -220,6 +212,7 @@ function SalesAnalytics() {
   const [notification, setNotification] = useState({ message: '', visible: false });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const user = JSON.parse(sessionStorage.getItem("user"));
 
   useEffect(() => {
     const fetchData = async () => {
@@ -529,12 +522,14 @@ function SalesAnalytics() {
               ₹{(actualSales/10000000).toFixed(1)}Cr
             </div>
           </div>
+          {user && user.role === 'Admin' && (
           <button
             onClick={() => setIsFormOpen(true)}
             className='action-button'
           >
             Add Sales Data
           </button>
+          )}
         </div>
       </div>
 

@@ -14,10 +14,26 @@ router.get("/users", authMiddleware, async (req, res) => {
 // Create user
 router.post("/users", authMiddleware, async (req, res) => {
   const { name, username, password, role } = req.body;
-  const hashedPassword = await bcrypt.hash(password, 10);
-  const newUser = await User.createUser({ name, username, password: hashedPassword, role });
-  res.json(newUser);
+
+  if (!name || !username || !password) {
+    return res.status(400).json({ message: "Name, username, and password are required" });
+  }
+
+  try {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const newUser = await User.createUser({
+      name,
+      username,
+      password: hashedPassword,
+      role
+    });
+    res.json(newUser);
+  } catch (err) {
+    console.error("Error creating user:", err);
+    res.status(500).json({ message: "Server error while creating user" });
+  }
 });
+
 
 // Delete users
 router.delete("/users", authMiddleware, async (req, res) => {

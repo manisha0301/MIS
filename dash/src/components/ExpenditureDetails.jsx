@@ -1,3 +1,4 @@
+import { use } from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { FaMoneyBillWave, FaEdit, FaTrash } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
@@ -9,6 +10,7 @@ function ExpenditureDetails() {
   const [editedItem, setEditedItem] = useState({ id: '', name: '', amount: '', quarter: 'Mar-May' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const user = JSON.parse(sessionStorage.getItem("user"));
 
   const fileInputRef = useRef(null);
 
@@ -153,6 +155,7 @@ function ExpenditureDetails() {
       <div className="header" style={{ padding: '20px' }}>
         <h1 style={{ fontSize: '24px' }}>Expenditure Details</h1>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {user && user.role === 'Admin' && (
           <button
             className="action-button"
             onClick={() => fileInputRef.current.click()}
@@ -160,6 +163,8 @@ function ExpenditureDetails() {
           >
             Import from Excel
           </button>
+          )}
+          {user && user.role === 'Admin' && (
           <button
             className="action-button"
             onClick={exportAllToExcel}
@@ -167,6 +172,7 @@ function ExpenditureDetails() {
           >
             Export Expenditure Report
           </button>
+          )}
           <input
             type="file"
             ref={fileInputRef}

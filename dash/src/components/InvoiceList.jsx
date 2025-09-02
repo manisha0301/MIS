@@ -20,6 +20,7 @@ function InvoiceList() {
   });
   const [previewPdf, setPreviewPdf] = useState('');
   const [notification, setNotification] = useState({ message: '', visible: false });
+  const user = JSON.parse(sessionStorage.getItem("user"));
 
   // Fetch invoices on component mount
   useEffect(() => {
@@ -268,12 +269,14 @@ function InvoiceList() {
       )}
       <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', backgroundColor: '#f8fafc' }}>
         <h1 style={{ color: '#fff', margin: 0 }}>Invoices</h1>
+        {user && (user.role === 'Admin') && (
         <button
           className="action-button"
           onClick={() => setIsFormOpen(true)}
         >
           Add New Invoice
         </button>
+        )}
       </div>
       {isFormOpen && (
         <div style={{
