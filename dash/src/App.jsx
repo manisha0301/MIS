@@ -10,6 +10,10 @@ import InvoiceList from './components/InvoiceList.jsx';
 import Login from './components/Login.jsx';
 import './styles/dashboard.css';
 import Admin from './components/Admin.jsx';
+import Projects from './components/Projects.jsx';
+import ProjectDetails from './components/ProjectDetails.jsx';
+import Revenue from './components/Revenue.jsx';
+import AddProject from './components/AddProject.jsx';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -29,26 +33,30 @@ function App() {
 
   return (
     <Router>
-        {isAuthenticated ? (
-      <div className="app">
-            <Sidebar />
-            <div className="main-content">
-              <Routes>
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/products" element={<ProductGrid />} />
-                <Route path="/customers" element={<CustomerList />} />
-                <Route path="/sales-analytics" element={<SalesAnalytics />} />
-                <Route path="/expenditure" element={<ExpenditureDetails />} />
-                <Route path="/invoices" element={<InvoiceList />} />
-                <Route path="/admin" element={<Admin />} />
-              </Routes>
-            </div>
-      </div>
-        ) : (
-          <Routes>
-            <Route path="/" element={<Login onLogin={handleLogin} />} />
-          </Routes>
-        )}
+      {isAuthenticated ? (
+        <div className="app">
+          <Sidebar />
+          <div className="main-content">
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/products" element={<ProductGrid />} />
+              <Route path="/customers" element={<CustomerList />} />
+              <Route path="/sales-analytics" element={<SalesAnalytics />} />
+              <Route path="/expenditure" element={<ExpenditureDetails />} />
+              <Route path="/invoices" element={<InvoiceList />} />
+              <Route path="/admin" element={<Admin />} />
+              <Route path="/projects/add" element={<AddProject />} />
+              <Route path="/projects/:id" element={<ProjectDetails />} />
+              <Route path="/projects" element={<Projects />} />
+              <Route path="/revenue" element={<Revenue />} />
+            </Routes>
+          </div>
+        </div>
+      ) : (
+        <Routes>
+          <Route path="/" element={<Login onLogin={handleLogin} />} />
+        </Routes>
+      )}
     </Router>
   );
 }

@@ -79,13 +79,14 @@ const response = await fetch('http://localhost:5000/api/admin/users', {
     try {
       const token = sessionStorage.getItem("token");
 
-const response = await fetch('http://localhost:5000/api/admin/users', {
-  method: 'DELETE',
-  headers: { 
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  },
-});
+    const response = await fetch('http://localhost:5000/api/admin/users', {
+      method: 'DELETE',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ ids: selectedIds }) // Send selectedIds in the body
+    });
 
       const data = await response.json();
       if (!response.ok) {

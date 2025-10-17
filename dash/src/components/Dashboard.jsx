@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import SalesChart from './SalesChart.jsx';
 import ExpenditureChart from './ExpenditureChart.jsx';
 import ForecastCard from '/src/components/ForecastCard.jsx';
-import { salesData, customerPurchasesByState } from '/src/data/mockData';
 import { FaBell, FaSignOutAlt } from 'react-icons/fa';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';

@@ -108,7 +108,10 @@ function ProductGrid() {
           `}</style>
         </div>
       )}
-      <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', backgroundColor: '#f8fafc' }}>
+      <div 
+      className="header" 
+      // style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', backgroundColor: '#f8fafc' }}
+      >
         <h1 style={{ color: '#fff', margin: 0 }}>Products</h1>
         {user && user.role === 'Admin' && (
         <button

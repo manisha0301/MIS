@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { FaHome, FaBox, FaUsers, FaChartLine, FaDollarSign, FaFileInvoiceDollar, FaUser, } from 'react-icons/fa';
-import logo from '../assets/logo.png';
+import { FaHome, FaBox, FaUsers, FaChartLine, FaDollarSign, FaFileInvoiceDollar, FaUser, FaMoneyBillWave, FaProjectDiagram, } from 'react-icons/fa';
+import logo from '../assets/LOGO_KRISTELLAR WHITE.png';
 
 function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -60,6 +60,20 @@ function Sidebar() {
             onClick={() => setIsOpen(false)}
           >
             <FaFileInvoiceDollar style={{ marginRight: '8px' }} /> Invoices
+          </NavLink>
+          <NavLink
+            to="/projects"
+            className={({ isActive }) => `sidebar-button ${isActive ? 'active' : ''}`}
+            onClick={() => setIsOpen(false)}
+          >
+            <FaProjectDiagram style={{ marginRight: '8px' }} /> Projects
+          </NavLink>
+          <NavLink
+            to="/revenue"
+            className={({ isActive }) => `sidebar-button ${isActive ? 'active' : ''}`}
+            onClick={() => setIsOpen(false)}
+          >
+            <FaMoneyBillWave style={{ marginRight: '8px' }} /> Revenue
           </NavLink>
           {user && (user.role === 'Admin' || user.role === 'Super-Admin') && (
           <NavLink

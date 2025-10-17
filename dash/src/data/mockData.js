@@ -1,4 +1,3 @@
-// mockData.js
 export const salesData = {
   quarters: ['Mar-Apr-May 2024', 'Jun-Jul-Aug 2024', 'Sep-Oct-Nov 2024', 'Dec-Jan-Feb 2025', 'Mar-Apr-May 2025'],
   directSales: [9960000, 12450000, 14940000, 16600000, 18000000],
@@ -21,22 +20,25 @@ export const forecastData = {
   forecastedSales: [14940000, 19090000, 23240000, 27390000, 29500000]
 };
 
-export const kpiData = {
-  totalRevenue: 53600000,
-  topProduct: 'ARMORED PHONE',
-  topState: 'NY'
+export const expenditureData = {
+  categories: ['Rent', 'Utilities', 'Cleaning', 'Repairs', 'Supplies'],
+  values: [5000000, 2000000, 1000000, 800000, 1200000]
 };
+
+export const salesInvoices = [
+  { id: 1, number: 'INV001', date: '2025-01-10', customer: 'Acme Corp', amount: 500000, dueDate: '2025-02-10', paymentMethod: 'Bank Transfer', notes: 'First installment', status: 'Paid' },
+  { id: 2, number: 'INV002', date: '2025-02-15', customer: 'Beta Inc', amount: 750000, dueDate: '2025-03-15', paymentMethod: 'Credit Card', notes: 'Annual contract', status: 'Due' }
+];
+
+export const purchaseInvoices = [
+  { id: 1, number: 'PUR001', date: '2025-01-05', supplier: 'Delta Supplies', amount: 300000, dueDate: '2025-02-05', paymentMethod: 'Bank Transfer', notes: 'Office supplies', status: 'Paid' },
+  { id: 2, number: 'PUR002', date: '2025-02-10', supplier: 'Gamma Tech', amount: 450000, dueDate: '2025-03-10', paymentMethod: 'Credit Card', notes: 'Hardware purchase', status: 'Due' }
+];
 
 export const productData = [
   { id: 1, name: 'ARMORED PHONE', price: 180000, category: 'Electronics', stock: 150, sales: 500, description: 'High-quality widget for enterprise solutions.', image: '/src/assets/Product1.png' },
   { id: 2, name: 'SGA 10', price: 41417, category: 'Gadgets', stock: 200, sales: 300, description: 'Premium gadget with advanced features.', image: '/src/assets/Product2.png' },
-  { id: 3, name: 'SGA 100', price: 96517, category: 'Tools', stock: 120, sales: 400, description: 'Cost-effective tool for small businesses.', image: '/src/assets/Product3.png' },
-];
-
-export const customerData = [
-  { id: 1, name: 'John Doe', contact: '9876543210', state: 'Maharashtra', totalPurchases: 25000 },
-  { id: 2, name: 'Jane Smith', contact: '8765432109', state: 'Karnataka', totalPurchases: 18500 },
-  { id: 3, name: 'Raj Patel', contact: '7654321098', state: 'Gujarat', totalPurchases: 32000 },
+  { id: 3, name: 'SGA 100', price: 96517, category: 'Tools', stock: 120, sales: 400, description: 'Cost-effective tool for small businesses.', image: '/src/assets/Product3.png' }
 ];
 
 export const customerPurchasesByState = {
@@ -52,113 +54,44 @@ export const customerPurchasesByState = {
   ]
 };
 
-export const expenditureData = {
-  details: [
-    {
-      category: 'Rent',
-      items: [
-        { name: 'Office Lease', amount: 1500000, quarter: 'Mar-May' },
-        { name: 'Parking Space', amount: 200000, quarter: 'Mar-May' },
-        { name: 'Office Lease', amount: 1550000, quarter: 'Jun-Aug' },
-        { name: 'Parking Space', amount: 210000, quarter: 'Jun-Aug' },
-        { name: 'Office Lease', amount: 1600000, quarter: 'Sep-Nov' },
-        { name: 'Parking Space', amount: 220000, quarter: 'Sep-Nov' },
-        { name: 'Office Lease', amount: 1650000, quarter: 'Dec-Feb' },
-        { name: 'Parking Space', amount: 230000, quarter: 'Dec-Feb' }
-      ]
-    },
-    {
-      category: 'Utilities',
-      items: [
-        { name: 'Electricity', amount: 50000, quarter: 'Mar-May' },
-        { name: 'Water', amount: 15000, quarter: 'Mar-May' },
-        { name: 'Internet', amount: 10000, quarter: 'Mar-May' },
-        { name: 'Electricity', amount: 52000, quarter: 'Jun-Aug' },
-        { name: 'Water', amount: 16000, quarter: 'Jun-Aug' },
-        { name: 'Internet', amount: 11000, quarter: 'Jun-Aug' },
-        { name: 'Electricity', amount: 53000, quarter: 'Sep-Nov' },
-        { name: 'Water', amount: 17000, quarter: 'Sep-Nov' },
-        { name: 'Internet', amount: 12000, quarter: 'Sep-Nov' },
-        { name: 'Electricity', amount: 54000, quarter: 'Dec-Feb' },
-        { name: 'Water', amount: 18000, quarter: 'Dec-Feb' },
-        { name: 'Internet', amount: 13000, quarter: 'Dec-Feb' }
-      ]
-    },
-    {
-      category: 'Cleaning',
-      items: [
-        { name: 'Janitorial Services', amount: 30000, quarter: 'Mar-May' },
-        { name: 'Cleaning Supplies', amount: 8000, quarter: 'Mar-May' },
-        { name: 'Janitorial Services', amount: 31000, quarter: 'Jun-Aug' },
-        { name: 'Cleaning Supplies', amount: 8500, quarter: 'Jun-Aug' },
-        { name: 'Janitorial Services', amount: 32000, quarter: 'Sep-Nov' },
-        { name: 'Cleaning Supplies', amount: 9000, quarter: 'Sep-Nov' },
-        { name: 'Janitorial Services', amount: 33000, quarter: 'Dec-Feb' },
-        { name: 'Cleaning Supplies', amount: 9500, quarter: 'Dec-Feb' }
-      ]
-    },
-    {
-      category: 'Repairs',
-      items: [
-        { name: 'HVAC Maintenance', amount: 25000, quarter: 'Mar-May' },
-        { name: 'Equipment Repairs', amount: 15000, quarter: 'Mar-May' },
-        { name: 'HVAC Maintenance', amount: 26000, quarter: 'Jun-Aug' },
-        { name: 'Equipment Repairs', amount: 16000, quarter: 'Jun-Aug' },
-        { name: 'HVAC Maintenance', amount: 27000, quarter: 'Sep-Nov' },
-        { name: 'Equipment Repairs', amount: 17000, quarter: 'Sep-Nov' },
-        { name: 'HVAC Maintenance', amount: 28000, quarter: 'Dec-Feb' },
-        { name: 'Equipment Repairs', amount: 18000, quarter: 'Dec-Feb' }
-      ]
-    },
-    {
-      category: 'Supplies',
-      items: Array.from({ length: 100 }, (_, index) => ({
-        name: `Office Item ${index + 1}`,
-        amount: 5000 + Math.floor(Math.random() * 10000),
-        quarter: ['Mar-May', 'Jun-Aug', 'Sep-Nov', 'Dec-Feb'][Math.floor(index / 25)]
-      }))
-    },
-    {
-      category: 'Salaries',
-      items: [
-        { name: 'Employee Salaries', amount: 2500000, quarter: 'Mar-May' },
-        { name: 'Bonuses', amount: 500000, quarter: 'Mar-May' },
-        { name: 'Employee Salaries', amount: 2550000, quarter: 'Jun-Aug' },
-        { name: 'Bonuses', amount: 510000, quarter: 'Jun-Aug' },
-        { name: 'Employee Salaries', amount: 2600000, quarter: 'Sep-Nov' },
-        { name: 'Bonuses', amount: 520000, quarter: 'Sep-Nov' },
-        { name: 'Employee Salaries', amount: 2650000, quarter: 'Dec-Feb' },
-        { name: 'Bonuses', amount: 530000, quarter: 'Dec-Feb' }
-      ]
-    }
-  ],
-  // Simplified data for ExpenditureChart.jsx pie chart
-  categories: ['Rent', 'Utilities', 'Cleaning', 'Repairs', 'Supplies', 'Salaries'],
-  values: [3870000, 86000, 39000, 40000, 750000, 3050000] // Aggregated quarterly totals for demo
-};
-
-export const salesInvoices = [
-  { id: 1, number: 'INV-001', date: '2025-03-15', customer: 'John Doe', amount: 25000, status: 'Paid', dueDate: '2025-04-15', paymentMethod: 'Credit Card', notes: 'First purchase', pdfUrl: null },
-  { id: 2, number: 'INV-002', date: '2025-04-20', customer: 'Jane Smith', amount: 18500, status: 'Due', dueDate: '2025-05-20', paymentMethod: 'Bank Transfer', notes: 'Pending approval', pdfUrl: null },
-  { id: 3, number: 'INV-003', date: '2025-05-10', customer: 'Raj Patel', amount: 32000, status: 'Paid', dueDate: '2025-06-10', paymentMethod: 'Cash', notes: 'Bulk order', pdfUrl: null },
-  { id: 4, number: 'INV-004', date: '2025-06-05', customer: 'Acme Corp', amount: 50000, status: 'Due', dueDate: '2025-07-05', paymentMethod: 'Credit Card', notes: 'Corporate deal', pdfUrl: null },
-  { id: 5, number: 'INV-005', date: '2025-07-25', customer: 'Beta Inc', amount: 45000, status: 'Paid', dueDate: '2025-08-25', paymentMethod: 'Bank Transfer', notes: 'Repeat customer', pdfUrl: null },
-  { id: 6, number: 'INV-006', date: '2025-08-01', customer: 'Gamma LLC', amount: 30000, status: 'Due', dueDate: '2025-09-01', paymentMethod: 'Cash', notes: 'New client', pdfUrl: null },
-  { id: 7, number: 'INV-007', date: '2025-08-10', customer: 'Delta Co', amount: 40000, status: 'Paid', dueDate: '2025-09-10', paymentMethod: 'Credit Card', notes: 'Urgent delivery', pdfUrl: null },
-  { id: 8, number: 'INV-008', date: '2025-08-15', customer: 'Epsilon Ltd', amount: 35000, status: 'Due', dueDate: '2025-09-15', paymentMethod: 'Bank Transfer', notes: 'Discount applied', pdfUrl: null },
-  { id: 9, number: 'INV-009', date: '2025-08-20', customer: 'John Doe', amount: 28000, status: 'Paid', dueDate: '2025-09-20', paymentMethod: 'Cash', notes: 'Second purchase', pdfUrl: null },
-  { id: 10, number: 'INV-010', date: '2025-08-21', customer: 'Jane Smith', amount: 22000, status: 'Due', dueDate: '2025-09-21', paymentMethod: 'Credit Card', notes: 'Follow-up needed', pdfUrl: null }
-];
-
-export const purchaseInvoices = [
-  { id: 1, number: 'PINV-001', date: '2025-03-10', supplier: 'Supplier A', amount: 15000, status: 'Paid', dueDate: '2025-04-10', paymentMethod: 'Bank Transfer', notes: 'Raw materials', pdfUrl: null },
-  { id: 2, number: 'PINV-002', date: '2025-04-15', supplier: 'Supplier B', amount: 20000, status: 'Due', dueDate: '2025-05-15', paymentMethod: 'Credit', notes: 'Equipment', pdfUrl: null },
-  { id: 3, number: 'PINV-003', date: '2025-05-05', supplier: 'Supplier C', amount: 10000, status: 'Paid', dueDate: '2025-06-05', paymentMethod: 'Cash', notes: 'Office supplies', pdfUrl: null },
-  { id: 4, number: 'PINV-004', date: '2025-06-20', supplier: 'Supplier D', amount: 30000, status: 'Due', dueDate: '2025-07-20', paymentMethod: 'Bank Transfer', notes: 'Maintenance', pdfUrl: null },
-  { id: 5, number: 'PINV-005', date: '2025-07-15', supplier: 'Supplier E', amount: 25000, status: 'Paid', dueDate: '2025-08-15', paymentMethod: 'Credit', notes: 'Software license', pdfUrl: null },
-  { id: 6, number: 'PINV-006', date: '2025-08-02', supplier: 'Supplier F', amount: 18000, status: 'Due', dueDate: '2025-09-02', paymentMethod: 'Cash', notes: 'Consulting fees', pdfUrl: null },
-  { id: 7, number: 'PINV-007', date: '2025-08-12', supplier: 'Supplier G', amount: 22000, status: 'Paid', dueDate: '2025-09-12', paymentMethod: 'Bank Transfer', notes: 'Marketing materials', pdfUrl: null },
-  { id: 8, number: 'PINV-008', date: '2025-08-16', supplier: 'Supplier H', amount: 27000, status: 'Due', dueDate: '2025-09-16', paymentMethod: 'Credit', notes: 'Travel expenses', pdfUrl: null },
-  { id: 9, number: 'PINV-009', date: '2025-08-18', supplier: 'Supplier I', amount: 19000, status: 'Paid', dueDate: '2025-09-18', paymentMethod: 'Cash', notes: 'Training', pdfUrl: null },
-  { id: 10, number: 'PINV-010', date: '2025-08-21', supplier: 'Supplier J', amount: 23000, status: 'Due', dueDate: '2025-09-21', paymentMethod: 'Bank Transfer', notes: 'Miscellaneous', pdfUrl: null }
+export const projectData = [
+  {
+    id: 1,
+    name: 'Hypersonic Ballistic Missile (HSBM)',
+    description: 'Revamping the company website with modern UI/UX and improved performance.',
+    lead: 'Alice Johnson',
+    team: ['Bob Smith', 'Clara Lee', 'David Kim'],
+    startDate: '2025-01-15',
+    endDate: '2025-06-30',
+    timeline: { completed: 40, inProgress: 50, remaining: 10 },
+    image: '/src/assets/project1.png',
+    company: 'Kristellar Aerospace',
+    revenue: 2000000
+  },
+  {
+    id: 2,
+    name: 'Mobile App Development',
+    description: 'Building a cross-platform mobile application for customer engagement.',
+    lead: 'Emma Davis',
+    team: ['Frank Wilson', 'Grace Chen', 'Henry Patel'],
+    startDate: '2025-03-01',
+    endDate: '2025-09-30',
+    timeline: { completed: 20, inProgress: 60, remaining: 20 },
+    image: '/src/assets/project2.png',
+    company: 'Kristellar Cyberspace',
+    revenue: 1500000
+  },
+  {
+    id: 3,
+    name: 'ERP System Upgrade project',
+    description: 'Upgrading the enterprise resource planning system for better efficiency.',
+    lead: 'James Brown',
+    team: ['Ivy Taylor', 'Jack Moore', 'Kelly White'],
+    startDate: '2025-02-10',
+    endDate: '2025-08-15',
+    timeline: { completed: 30, inProgress: 50, remaining: 20 },
+    image: '/src/assets/project3.png',
+    company: 'Protelion',
+    revenue: 1800000
+  }
 ];

@@ -6,8 +6,8 @@ const path = require('path');
 const fs = require('fs');
 
 // Configure Multer for file uploads
-const uploadPath = path.join(__dirname, '../Uploads/products');
-// Create the Uploads/products directory if it doesn't exist
+const uploadPath = path.join(__dirname, '../uploads/products');
+// Create the uploads/products directory if it doesn't exist
 fs.mkdirSync(uploadPath, { recursive: true });
 
 const storage = multer.diskStorage({

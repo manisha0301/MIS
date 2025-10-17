@@ -7,8 +7,8 @@ const fs = require('fs');
 const authMiddleware = require('../middleware/authMiddleware');
 
 // Configure Multer for PDF uploads
-const uploadPath = path.join(__dirname, '../Uploads/pdf');
-// Create the Uploads/pdf directory if it doesn't exist
+const uploadPath = path.join(__dirname, '../uploads/pdf');
+// Create the uploads/pdf directory if it doesn't exist
 fs.mkdirSync(uploadPath, { recursive: true });
 
 const storage = multer.diskStorage({

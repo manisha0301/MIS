@@ -7,6 +7,7 @@ const createInvoicesTable = async () => {
       type VARCHAR(20) NOT NULL CHECK (type IN ('sales', 'purchase')),
       number VARCHAR(50) NOT NULL,
       date DATE NOT NULL,
+      company VARCHAR(100),
       customer VARCHAR(100),
       supplier VARCHAR(100),
       amount DECIMAL(10, 2) NOT NULL,
@@ -32,13 +33,13 @@ const createInvoicesTable = async () => {
 };
 
 const addInvoice = async (invoice) => {
-  const { type, number, date, customer, supplier, amount, dueDate, paymentMethod, notes, status, pdfUrl } = invoice;
+  const { type, number, date, company, customer, supplier, amount, dueDate, paymentMethod, notes, status, pdfUrl } = invoice;
   const query = `
-    INSERT INTO invoices (type, number, date, customer, supplier, amount, due_date, payment_method, notes, status, pdf_url)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    INSERT INTO invoices (type, number, date, company, customer, supplier, amount, due_date, payment_method, notes, status, pdf_url)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
     RETURNING *;
   `;
-  const values = [type, number, date, customer || null, supplier || null, amount, dueDate, paymentMethod, notes || null, status, pdfUrl || null];
+  const values = [type, number, date, company, customer || null, supplier || null, amount, dueDate, paymentMethod, notes || null, status, pdfUrl || null];
   try {
     const result = await pool.query(query, values);
     return result.rows[0];

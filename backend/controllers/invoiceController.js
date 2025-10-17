@@ -2,13 +2,14 @@ const invoiceModel = require('../models/invoiceModel');
 
 const addInvoice = async (req, res) => {
   try {
-    const { type, number, date, customer, supplier, amount, dueDate, paymentMethod, notes, status } = req.body;
+    const { type, number, date, company, customer, supplier, amount, dueDate, paymentMethod, notes, status } = req.body;
     const pdfUrl = req.file ? `/uploads/pdf/${req.file.filename}` : null;
 
     const invoice = {
       type,
       number,
       date,
+      company,
       customer,
       supplier,
       amount: parseFloat(amount),
@@ -18,7 +19,6 @@ const addInvoice = async (req, res) => {
       status,
       pdfUrl,
     };
-
     const newInvoice = await invoiceModel.addInvoice(invoice);
     res.status(201).json(newInvoice);
   } catch (error) {

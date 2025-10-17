@@ -11,6 +11,7 @@ function InvoiceList() {
     date: '',
     customer: '',
     supplier: '',
+    company: '',
     amount: '',
     dueDate: '',
     paymentMethod: '',
@@ -161,8 +162,8 @@ function InvoiceList() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const requiredFields = modalTab === 'sales' 
-      ? ['number', 'date', 'customer', 'amount', 'dueDate', 'paymentMethod']
-      : ['number', 'date', 'supplier', 'amount', 'dueDate', 'paymentMethod'];
+      ? ['number', 'date', 'customer', 'company', 'amount', 'dueDate', 'paymentMethod']
+      : ['number', 'date', 'supplier','company', 'amount', 'dueDate', 'paymentMethod'];
     
     if (requiredFields.some(field => !newInvoice[field])) {
       setNotification({ message: 'Please fill all required fields.', visible: true });
@@ -174,6 +175,7 @@ function InvoiceList() {
     formData.append('type', modalTab);
     formData.append('number', newInvoice.number);
     formData.append('date', newInvoice.date);
+    formData.append('company', newInvoice.company || '');
     formData.append('customer', newInvoice.customer || '');
     formData.append('supplier', newInvoice.supplier || '');
     formData.append('amount', newInvoice.amount);
@@ -209,6 +211,7 @@ function InvoiceList() {
         date: '',
         customer: '',
         supplier: '',
+        company: '',
         amount: '',
         dueDate: '',
         paymentMethod: '',
@@ -359,6 +362,20 @@ function InvoiceList() {
                 />
               </div>
               <div style={{ marginBottom: '15px' }}>
+                    <label style={{ display: 'block', color: '#1e293b', fontWeight: '500', marginBottom: '5px' }}>Company:</label>
+                    <select
+                      name="company"
+                      value={newInvoice.company}
+                      onChange={handleInputChange}
+                      style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '14px' }}
+                    >
+                      <option value="">Select Company</option>
+                      <option value="Kristellar Aerospace">Kristellar Aerospace</option>
+                      <option value="Kristellar Cyberspace">Kristellar Cyberspace</option>
+                      <option value="Protelion">Protelion</option>
+                    </select>
+                  </div>
+              <div style={{ marginBottom: '15px' }}>
                 <label style={{ display: 'block', color: '#1e293b', fontWeight: '500', marginBottom: '5px' }}>
                   {modalTab === 'sales' ? 'Customer' : 'Supplier'}:
                 </label>
@@ -475,6 +492,7 @@ function InvoiceList() {
                       date: '',
                       customer: '',
                       supplier: '',
+                      company:'',
                       amount: '',
                       dueDate: '',
                       paymentMethod: '',

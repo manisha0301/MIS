@@ -5,11 +5,13 @@ const customerRoutes = require('./routes/customerRoutes');
 const invoiceRoutes = require('./routes/invoiceRoutes');
 const expenditureRoutes = require('./routes/expenditureRoutes');
 const salesRoutes = require('./routes/salesRoutes');
+const projectRoutes = require('./routes/projectRoutes');
 const productModel = require('./models/productModel');
 const customerModel = require('./models/customerModel');
 const invoiceModel = require('./models/invoiceModel');
 const expenditureModel = require('./models/expenditureModel');
 const salesModel = require('./models/salesModel');
+const projectModel = require('./models/projectModel');
 const path = require('path');
 const authRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
@@ -33,6 +35,7 @@ app.use('/api/customers', customerRoutes);
 app.use('/api/invoices', invoiceRoutes);
 app.use('/api/expenditures', expenditureRoutes);
 app.use('/api/sales', salesRoutes);
+app.use('/api/projects', projectRoutes);
 
 // Initialize database tables
 const initializeDatabase = async () => {
@@ -43,6 +46,7 @@ const initializeDatabase = async () => {
     await invoiceModel.createInvoicesTable();
     await expenditureModel.createExpendituresTable();
     await salesModel.createSalesTables();
+    await projectModel.createProjectsTable();
 
     // Create default admin if not exists
     const admin = await userModel.findUserByUsername("admin");
