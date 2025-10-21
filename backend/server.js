@@ -47,6 +47,8 @@ const initializeDatabase = async () => {
     await expenditureModel.createExpendituresTable();
     await salesModel.createSalesTables();
     await projectModel.createProjectsTable();
+    await projectModel.createCapxTable();
+    await projectModel.createOpxTable();
 
     // Create default admin if not exists
     const admin = await userModel.findUserByUsername("admin");

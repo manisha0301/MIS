@@ -11,7 +11,7 @@
   padding: 16px;
   position: fixed;
   height: 100%;
-  overflow-y: auto;
+  /* overflow-y: auto; */
   transition: transform 0.3s ease;
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
   z-index: 1000;

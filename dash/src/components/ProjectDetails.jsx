@@ -5,64 +5,94 @@ import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Toolti
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
+const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
 function ProjectDetails() {
   const { id } = useParams();
-  const [formData, setFormData] = useState(null); // Initialize as null
+  const [formData, setFormData] = useState(null);
   const [previewImage, setPreviewImage] = useState('');
   const [notification, setNotification] = useState({ message: '', visible: false });
   const [isEditing, setIsEditing] = useState(false);
+  const [capxModalOpen, setCapxModalOpen] = useState(false);
+  const [opxModalOpen, setOpxModalOpen] = useState(false);
+  const [capxData, setCapxData] = useState([
+    { id: 1, item: 'Equipment', amount: 50000, date: '2025-01-15', description: 'Purchase of machinery' },
+    { id: 2, item: 'Infrastructure', amount: 25000, date: '2025-02-10', description: 'Facility upgrades' }
+  ]);
+  const [opxData, setOpxData] = useState([
+    { id: 1, item: 'Salaries', amount: 30000, date: '2025-01-30', description: 'Monthly payroll' },
+    { id: 2, item: 'Utilities', amount: 5000, date: '2025-02-01', description: 'Electricity and water' }
+  ]);
 
-  useEffect(() => {
-    const fetchProject = async () => {
-      try {
-        const response = await fetch(`http://localhost:5000/api/projects/${id}`);
-        const project = await response.json();
-        console.log("Result:",project);
-        if (response.ok) {
-          setFormData({
-            ...project,
-            startDate: project.start_date,
-            endDate: project.end_date,
-            timeline: {
-              completed: project.timeline_completed,
-              inProgress: project.timeline_in_progress,
-              remaining: project.timeline_remaining
-            }
-          });
-          setPreviewImage(project.image);
-        } else {
-          setNotification({ message: 'Project not found', visible: true });
-          setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
-        }
-      } catch (error) {
-        setNotification({ message: 'Error fetching project', visible: true });
+  // TEMP / ORIGINAL snapshots for modal editing
+  const [tempCapxData, setTempCapxData] = useState(null);
+  const [originalCapxData, setOriginalCapxData] = useState(null);
+  const [tempOpxData, setTempOpxData] = useState(null);
+  const [originalOpxData, setOriginalOpxData] = useState(null);
+
+  // extract fetchProject so we can refresh after saving modal changes
+  const fetchProject = async () => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/projects/${id}`);
+      const project = await response.json();
+      if (response.ok) {
+        setFormData({
+          ...project,
+          startDate: formatDate(project.start_date),
+          endDate: formatDate(project.end_date),
+          timeline: {
+            completed: project.timeline_completed,
+            inProgress: project.timeline_in_progress,
+            remaining: project.timeline_remaining
+          }
+        });
+
+        setPreviewImage(project.image);
+        setCapxData(project.capx || []);
+        setOpxData(project.opx || []);
+      } else {
+        setNotification({ message: 'Project not found', visible: true });
         setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
       }
-    };
+    } catch (error) {
+      setNotification({ message: 'Error fetching project', visible: true });
+      setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+    }
+  };
+
+  useEffect(() => {
     fetchProject();
   }, [id]);
 
-  if (!formData) {
-    return (
-      <div className="dashboard" style={{
-        padding: '24px',
-        backgroundColor: '#f8fafc',
-        minHeight: '100vh',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center'
-      }}>
-        <h1 style={{
-          fontSize: '28px',
-          fontWeight: '600',
-          color: '#1e293b',
-          fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
-          textAlign: 'center',
-          letterSpacing: '0.2px'
-        }}>Project Not Found</h1>
-      </div>
-    );
-  }
+  // Open modal helpers to initialize temps when editing
+  const openCapxModal = () => {
+    if (isEditing) {
+      setTempCapxData(capxData.map(r => ({ ...r })));
+      setOriginalCapxData(capxData.map(r => ({ ...r })));
+    } else {
+      setTempCapxData(null);
+      setOriginalCapxData(null);
+    }
+    setCapxModalOpen(true);
+  };
+
+  const openOpxModal = () => {
+    if (isEditing) {
+      setTempOpxData(opxData.map(r => ({ ...r })));
+      setOriginalOpxData(opxData.map(r => ({ ...r })));
+    } else {
+      setTempOpxData(null);
+      setOriginalOpxData(null);
+    }
+    setOpxModalOpen(true);
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -83,12 +113,423 @@ function ProjectDetails() {
     const file = e.target.files[0];
     if (file && ['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
       const imageUrl = URL.createObjectURL(file);
-      setFormData({ ...formData, image: file }); // Store File object
+      setFormData({ ...formData, image: file });
       setPreviewImage(imageUrl);
     } else {
       setNotification({ message: 'Please upload a valid image (PNG, JPEG, or WebP).', visible: true });
       setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
     }
+  };
+
+  // Add row: if editing + modal open => add to temp only (local). Otherwise (view mode) optionally POST immediately.
+  const addCapxRow = async () => {
+    if (isEditing && capxModalOpen) {
+      const newRow = {
+        id: -Date.now(), // negative temp id to indicate unsaved row
+        projectId: id,
+        item: '',
+        amount: 0,
+        date: null,
+        description: ''
+      };
+      setTempCapxData(prev => (prev ? [...prev, newRow] : [newRow]));
+      return;
+    }
+
+    // non-editing fallback: immediate backend create
+    try {
+      const newCapx = { projectId: id, item: '', amount: 0, date: null, description: '' };
+      const response = await fetch(`http://localhost:5000/api/projects/${id}/capx`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        },
+        body: JSON.stringify(newCapx)
+      });
+      const result = await response.json();
+      if (response.ok) {
+        setCapxData([...capxData, result.capx]);
+        setNotification({ message: 'CAPX row added successfully', visible: true });
+        setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+      } else {
+        setNotification({ message: result.message, visible: true });
+        setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+      }
+    } catch (error) {
+      setNotification({ message: 'Error adding CAPX row', visible: true });
+      setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+    }
+  };
+
+  const addOpxRow = async () => {
+    if (isEditing && opxModalOpen) {
+      const newRow = { id: -Date.now(), projectId: id, item: '', amount: 0, date: null, description: '' };
+      setTempOpxData(prev => (prev ? [...prev, newRow] : [newRow]));
+      return;
+    }
+
+    // non-edit fallback
+    try {
+      const newOpx = { projectId: id, item: '', amount: 0, date: null, description: '' };
+      const response = await fetch(`http://localhost:5000/api/projects/${id}/opx`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+        },
+        body: JSON.stringify(newOpx)
+      });
+      const result = await response.json();
+      if (response.ok) {
+        setOpxData([...opxData, result.opx]);
+        setNotification({ message: 'OPX row added successfully', visible: true });
+        setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+      } else {
+        setNotification({ message: result.message, visible: true });
+        setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+      }
+    } catch (error) {
+      setNotification({ message: 'Error adding OPX row', visible: true });
+      setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+    }
+  };
+
+  const handleCapxInputChange = (idParam, field, value) => {
+    if (isEditing && capxModalOpen) {
+      const updated = (tempCapxData || []).map(item =>
+        item.id === idParam ? { ...item, [field]: field === 'amount' ? parseFloat(value) || 0 : value } : item
+      );
+      setTempCapxData(updated);
+      return;
+    }
+
+    const updatedCapxData = capxData.map(item =>
+      item.id === idParam ? { ...item, [field]: field === 'amount' ? parseFloat(value) || 0 : value } : item
+    );
+    setCapxData(updatedCapxData);
+  };
+
+  const handleOpxInputChange = (idParam, field, value) => {
+    if (isEditing && opxModalOpen) {
+      const updated = (tempOpxData || []).map(item =>
+        item.id === idParam ? { ...item, [field]: field === 'amount' ? parseFloat(value) || 0 : value } : item
+      );
+      setTempOpxData(updated);
+      return;
+    }
+
+    const updatedOpxData = opxData.map(item =>
+      item.id === idParam ? { ...item, [field]: field === 'amount' ? parseFloat(value) || 0 : value } : item
+    );
+    setOpxData(updatedOpxData);
+  };
+
+  // Delete: if editing and modal open -> remove locally. Otherwise perform backend delete.
+  const deleteCapx = async (rowId) => {
+    if (isEditing && capxModalOpen) {
+      setTempCapxData(prev => (prev || []).filter(item => item.id !== rowId));
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/projects/capx/${rowId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }
+      });
+      const result = await response.json();
+      if (response.ok) {
+        setCapxData(capxData.filter(item => item.id !== rowId));
+        setNotification({ message: 'CAPX deleted successfully', visible: true });
+        setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+      } else {
+        setNotification({ message: result.message, visible: true });
+        setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+      }
+    } catch (error) {
+      setNotification({ message: 'Error deleting CAPX', visible: true });
+      setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+    }
+  };
+
+  const deleteOpx = async (rowId) => {
+    if (isEditing && opxModalOpen) {
+      setTempOpxData(prev => (prev || []).filter(item => item.id !== rowId));
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/projects/opx/${rowId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }
+      });
+      const result = await response.json();
+      if (response.ok) {
+        setOpxData(opxData.filter(item => item.id !== rowId));
+        setNotification({ message: 'OPX deleted successfully', visible: true });
+        setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+      } else {
+        setNotification({ message: result.message, visible: true });
+        setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+      }
+    } catch (error) {
+      setNotification({ message: 'Error deleting OPX', visible: true });
+      setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+    }
+  };
+
+  // Save modal changes -> sync local temp -> backend (POST new, PUT existing, DELETE removed)
+  const saveCapxChanges = async () => {
+    if (!(isEditing && capxModalOpen)) {
+      // fallback to previous behavior: update existing capxData entries via PUT
+      for (const capx of capxData) {
+        if (!capx.item || !capx.amount || !capx.date) {
+          setNotification({ message: 'Please provide all required fields: item, amount, date for all CAPX rows.', visible: true });
+          setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+          return;
+        }
+      }
+      try {
+        for (const capx of capxData) {
+          const response = await fetch(`http://localhost:5000/api/projects/capx/${capx.id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+            },
+            body: JSON.stringify(capx)
+          });
+          const result = await response.json();
+          if (!response.ok) {
+            setNotification({ message: result.message, visible: true });
+            setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+            return;
+          }
+        }
+        setNotification({ message: 'All CAPX rows updated successfully', visible: true });
+        setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+        setCapxModalOpen(false);
+      } catch (error) {
+        setNotification({ message: 'Error updating CAPX rows', visible: true });
+        setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+      }
+      return;
+    }
+
+    const temp = tempCapxData || [];
+    // validate
+    for (const capx of temp) {
+      if (!capx.item || !capx.amount || !capx.date) {
+        setNotification({ message: 'Please provide all required fields: item, amount, date for all CAPX rows.', visible: true });
+        setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+        return;
+      }
+    }
+
+    try {
+      // determine creates, updates and deletes
+      const originals = originalCapxData || [];
+      const originalsById = new Map(originals.filter(r => r.id > 0).map(r => [r.id, r]));
+      const tempIds = new Set(temp.filter(r => r.id > 0).map(r => r.id));
+
+      // deletes: ids present in originals but missing in temp
+      const toDelete = originals.filter(r => r.id > 0 && !tempIds.has(r.id)).map(r => r.id);
+
+      // creations: temp rows with negative ids
+      const toCreate = temp.filter(r => r.id < 0);
+
+      // updates: temp rows with positive ids (we'll PUT them)
+      const toUpdate = temp.filter(r => r.id > 0);
+
+      // perform deletes
+      for (const delId of toDelete) {
+        const res = await fetch(`http://localhost:5000/api/projects/capx/${delId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          setNotification({ message: err.message || 'Error deleting CAPX', visible: true });
+          setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+          return;
+        }
+      }
+
+      // perform updates
+      for (const capx of toUpdate) {
+        const res = await fetch(`http://localhost:5000/api/projects/capx/${capx.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+          },
+          body: JSON.stringify(capx)
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          setNotification({ message: err.message || 'Error updating CAPX', visible: true });
+          setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+          return;
+        }
+      }
+
+      // perform creates
+      for (const capx of toCreate) {
+        const payload = { projectId: id, item: capx.item, amount: capx.amount, date: capx.date, description: capx.description };
+        const res = await fetch(`http://localhost:5000/api/projects/${id}/capx`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+          },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          setNotification({ message: err.message || 'Error creating CAPX', visible: true });
+          setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+          return;
+        }
+      }
+
+      // refresh from backend
+      await fetchProject();
+      setNotification({ message: 'CAPX changes saved successfully', visible: true });
+      setTempCapxData(null);
+      setOriginalCapxData(null);
+      setCapxModalOpen(false);
+      setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+    } catch (error) {
+      setNotification({ message: 'Error saving CAPX rows', visible: true });
+      setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+    }
+  };
+
+  const saveOpxChanges = async () => {
+    if (!(isEditing && opxModalOpen)) {
+      // fallback to previous behavior: update existing opxData entries via PUT
+      for (const opx of opxData) {
+        if (!opx.item || !opx.amount || !opx.date) {
+          setNotification({ message: 'Please provide all required fields: item, amount, date for all OPX rows.', visible: true });
+          setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+          return;
+        }
+      }
+      try {
+        for (const opx of opxData) {
+          const response = await fetch(`http://localhost:5000/api/projects/opx/${opx.id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+            },
+            body: JSON.stringify(opx)
+          });
+          const result = await response.json();
+          if (!response.ok) {
+            setNotification({ message: result.message, visible: true });
+            setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+            return;
+          }
+        }
+        setNotification({ message: 'All OPX rows updated successfully', visible: true });
+        setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+        setOpxModalOpen(false);
+      } catch (error) {
+        setNotification({ message: 'Error updating OPX rows', visible: true });
+        setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+      }
+      return;
+    }
+
+    const temp = tempOpxData || [];
+    for (const opx of temp) {
+      if (!opx.item || !opx.amount || !opx.date) {
+        setNotification({ message: 'Please provide all required fields: item, amount, date for all OPX rows.', visible: true });
+        setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+        return;
+      }
+    }
+
+    try {
+      const originals = originalOpxData || [];
+      const tempIds = new Set(temp.filter(r => r.id > 0).map(r => r.id));
+
+      const toDelete = originals.filter(r => r.id > 0 && !tempIds.has(r.id)).map(r => r.id);
+      const toCreate = temp.filter(r => r.id < 0);
+      const toUpdate = temp.filter(r => r.id > 0);
+
+      for (const delId of toDelete) {
+        const res = await fetch(`http://localhost:5000/api/projects/opx/${delId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          setNotification({ message: err.message || 'Error deleting OPX', visible: true });
+          setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+          return;
+        }
+      }
+
+      for (const opx of toUpdate) {
+        const res = await fetch(`http://localhost:5000/api/projects/opx/${opx.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+          },
+          body: JSON.stringify(opx)
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          setNotification({ message: err.message || 'Error updating OPX', visible: true });
+          setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+          return;
+        }
+      }
+
+      for (const opx of toCreate) {
+        const payload = { projectId: id, item: opx.item, amount: opx.amount, date: opx.date, description: opx.description };
+        const res = await fetch(`http://localhost:5000/api/projects/${id}/opx`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+          },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          setNotification({ message: err.message || 'Error creating OPX', visible: true });
+          setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+          return;
+        }
+      }
+
+      await fetchProject();
+      setNotification({ message: 'OPX changes saved successfully', visible: true });
+      setTempOpxData(null);
+      setOriginalOpxData(null);
+      setOpxModalOpen(false);
+      setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+    } catch (error) {
+      setNotification({ message: 'Error saving OPX rows', visible: true });
+      setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+    }
+  };
+
+  // Cancel modal changes => revert temp -> original and close
+  const cancelCapxChanges = () => {
+    setTempCapxData(null);
+    setOriginalCapxData(null);
+    setCapxModalOpen(false);
+  };
+
+  const cancelOpxChanges = () => {
+    setTempOpxData(null);
+    setOriginalOpxData(null);
+    setOpxModalOpen(false);
   };
 
   const handleSubmit = async (e) => {
@@ -132,7 +573,7 @@ function ProjectDetails() {
       if (response.ok) {
         setFormData({
           ...result.project,
-          startDate: result.project.start_date,  
+          startDate: result.project.start_date,
           endDate: result.project.end_date,
           timeline: {
             completed: result.project.timeline_completed,
@@ -141,8 +582,10 @@ function ProjectDetails() {
           }
         });
         setPreviewImage(result.project.image);
-        setNotification({ message: result.message, visible: true });
+        setNotification({ message: 'Project updated successfully', visible: true });
         setIsEditing(false);
+        setCapxModalOpen(false);
+        setOpxModalOpen(false);
         setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
       } else {
         setNotification({ message: result.message, visible: true });
@@ -267,6 +710,302 @@ function ProjectDetails() {
           {notification.message}
         </div>
       )}
+      {capxModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            padding: '24px',
+            width: '80%',
+            maxWidth: '800px',
+            maxHeight: '80vh',
+            overflowY: 'auto',
+            boxShadow: '0 6px 16px rgba(0, 0, 0, 0.2)'
+          }}>
+            <h2 style={{
+              fontSize: '20px',
+              fontWeight: '600',
+              color: '#1e293b',
+              marginBottom: '16px'
+            }}>Capital Expenses (CAPX)</h2>
+            <table className="invoice-table">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Amount (₹)</th>
+                  <th>Date</th>
+                  <th>Description</th>
+                  {isEditing && <th>Actions</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {(isEditing && tempCapxData ? tempCapxData : capxData).map(item => (
+                  <tr key={item.id}>
+                    <td>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={item.item}
+                          onChange={(e) => handleCapxInputChange(item.id, 'item', e.target.value)}
+                          style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '6px' }}
+                        />
+                      ) : (
+                        <span>{item.item}</span>
+                      )}
+                    </td>
+                    <td>
+                      {isEditing ? (
+                        <input
+                          type="number"
+                          value={item.amount}
+                          onChange={(e) => handleCapxInputChange(item.id, 'amount', e.target.value)}
+                          style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '6px' }}
+                        />
+                      ) : (
+                        <span>₹{(item.amount || 0).toLocaleString('en-IN')}</span>
+                      )}
+                    </td>
+                    <td>
+                      {isEditing ? (
+                        <input
+                          type="date"
+                          // value={item.date ? new Date(item.date).toISOString().split('T')[0] : ''}
+                          value={item.date ? formatDate(item.date) : ''}
+                          onChange={(e) => handleCapxInputChange(item.id, 'date', e.target.value)}
+                          style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '6px' }}
+                        />
+                      ) : (
+                        <span>{item.date ? new Date(item.date).toLocaleDateString('en-IN') : ''}</span>
+                      )}
+                    </td>
+                    <td>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={item.description}
+                          onChange={(e) => handleCapxInputChange(item.id, 'description', e.target.value)}
+                          style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '6px' }}
+                        />
+                      ) : (
+                        <span>{item.description}</span>
+                      )}
+                    </td>
+                    {isEditing && (
+                    <td>
+                        <button
+                          onClick={() => deleteCapx(item.id)}
+                          style={{ padding: '8px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '6px' }}
+                        >
+                          Delete
+                        </button>
+                    </td>
+                      )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ marginTop: '16px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              {isEditing && (
+                <button
+                  type="button"
+                  onClick={addCapxRow}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#0a9396',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: '600'
+                  }}
+                >Add Row</button>
+              )}
+              {(isEditing) && (
+                <button
+                  onClick={saveCapxChanges}
+                  style={{ padding: '8px 16px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '6px' }}
+                >
+                  Save
+                </button>
+                )}
+              <button
+                type="button"
+                onClick={isEditing ? cancelCapxChanges : () => setCapxModalOpen(false)}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#aecfeeff',
+                  color: '#1e293b',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: '600'
+                }}
+              >Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {opxModalOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 2000
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            padding: '24px',
+            width: '80%',
+            maxWidth: '800px',
+            maxHeight: '80vh',
+            overflowY: 'auto',
+            boxShadow: '0 6px 16px rgba(0, 0, 0, 0.2)'
+          }}>
+            <h2 style={{
+              fontSize: '20px',
+              fontWeight: '600',
+              color: '#1e293b',
+              marginBottom: '16px'
+            }}>Operational Expenses (OPX)</h2>
+            <table className="invoice-table">
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Amount (₹)</th>
+                  <th>Date</th>
+                  <th>Description</th>
+                  {isEditing && <th>Actions</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {(isEditing && tempOpxData ? tempOpxData : opxData).map(item => (
+                  <tr key={item.id}>
+                    <td>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={item.item}
+                          onChange={(e) => handleOpxInputChange(item.id, 'item', e.target.value)}
+                          style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '6px' }}
+                        />
+                      ) : (
+                        <span>{item.item}</span>
+                      )}
+                    </td>
+                    <td>
+                      {isEditing ? (
+                        <input
+                          type="number"
+                          value={item.amount}
+                          onChange={(e) => handleOpxInputChange(item.id, 'amount', e.target.value)}
+                          style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '6px' }}
+                        />
+                      ) : (
+                        <span>₹{(item.amount || 0).toLocaleString('en-IN')}</span>
+                      )}
+                    </td>
+                    <td>
+                      {isEditing ? (
+                        <input
+                          type="date"
+                          // value={item.date ? new Date(item.date).toISOString().split('T')[0] : ''}
+                          value={item.date ? formatDate(item.date) : ''}
+                          onChange={(e) => handleOpxInputChange(item.id, 'date', e.target.value)}
+                          style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '6px' }}
+                        />
+                      ) : (
+                        <span>{item.date ? new Date(item.date).toLocaleDateString('en-IN') : ''}</span>
+                      )}
+                    </td>
+                    <td>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={item.description}
+                          onChange={(e) => handleOpxInputChange(item.id, 'description', e.target.value)}
+                          style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '6px' }}
+                        />
+                      ) : (
+                        <span>{item.description}</span>
+                      )}
+                    </td>
+                      {isEditing && (
+                    <td>
+                        <button
+                          onClick={() => deleteOpx(item.id)}
+                          style={{ padding: '8px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '6px' }}
+                        >
+                          Delete
+                        </button>
+                    </td>
+                      )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ marginTop: '16px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              {isEditing && (
+                <button
+                  type="button"
+                  onClick={addOpxRow}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#0a9396',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: '600'
+                  }}
+                >Add Row</button>
+              )}
+              {(isEditing) && (
+                <button
+                  onClick={saveOpxChanges}
+                  style={{ padding: '8px 16px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '6px' }}
+                >
+                  Save
+                </button>
+                )}
+              <button
+                type="button"
+                onClick={isEditing ? cancelOpxChanges : () => setOpxModalOpen(false)}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#aecfeeff',
+                  color: '#1e293b',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: '600'
+                }}
+              >Close</button>
+            </div>
+          </div>
+        </div>
+      )}
       <div style={{
         maxWidth: '900px',
         margin: '0 auto 24px auto',
@@ -279,7 +1018,7 @@ function ProjectDetails() {
           marginBottom: '16px',
           fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif',
           letterSpacing: '0.2px'
-        }}>{formData.name}</h1>
+        }}>{formData?.name || 'Project Not Found'}</h1>
         <div style={{
           borderRadius: '12px',
           overflow: 'hidden',
@@ -289,20 +1028,21 @@ function ProjectDetails() {
           backgroundColor: '#f0f4f8',
           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)'
         }}>
-          <img
-            // src={previewImage}
-            src={`http://localhost:5000${previewImage}`}
-            alt={formData.name}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              transition: 'transform 0.3s ease'
-            }}
-          />
+          {formData && (
+            <img
+              src={`http://localhost:5000${previewImage}`}
+              alt={formData.name}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                transition: 'transform 0.3s ease'
+              }}
+            />
+          )}
         </div>
         <div style={{
           display: 'flex',
@@ -311,6 +1051,7 @@ function ProjectDetails() {
           marginBottom: '24px'
         }}>
           <button
+            type="button"
             onClick={() => setIsEditing(true)}
             style={{
               padding: '10px 24px',
@@ -668,6 +1409,47 @@ function ProjectDetails() {
               </div>
             </div>
             <div style={{
+              backgroundColor: '#f7f9fc',
+              padding: '14px',
+              borderRadius: '8px',
+              marginBottom: '12px',
+              boxShadow: '0 1px 4px rgba(0, 0, 0, 0.05)'
+            }}>
+              <div style={{ margin: '6px 0' }}>
+                <strong style={{ color: '#0a9396', fontWeight: '600' }}>Expenses:</strong>
+                <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={openCapxModal}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#0a9396',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: '600'
+                    }}
+                  >CAPX</button>
+                  <button
+                    type="button"
+                    onClick={openOpxModal}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#0a9396',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: '600'
+                    }}
+                  >OPX</button>
+                </div>
+              </div>
+            </div>
+            <div style={{
               display: 'flex',
               justifyContent: 'flex-start',
               gap: '16px'
@@ -705,8 +1487,14 @@ function ProjectDetails() {
                 type="button"
                 onClick={() => {
                   setIsEditing(false);
-                  setPreviewImage(project.image);
-                  setFormData(project);
+                  setCapxModalOpen(false);
+                  setOpxModalOpen(false);
+                  setPreviewImage(formData.image);
+                  // discard any temp modal edits if still open
+                  setTempCapxData(null);
+                  setOriginalCapxData(null);
+                  setTempOpxData(null);
+                  setOriginalOpxData(null);
                 }}
                 style={{
                   padding: '10px 24px',
@@ -758,7 +1546,7 @@ function ProjectDetails() {
               boxShadow: '0 1px 4px rgba(0, 0, 0, 0.05)'
             }}>
               <p style={{ margin: '6px 0' }}>
-                <strong style={{ color: '#0a9396', fontWeight: '600' }}>Description:</strong> {formData.description}
+                <strong style={{ color: '#0a9396', fontWeight: '600' }}>Description:</strong> {formData?.description}
               </p>
             </div>
             <div style={{
@@ -769,7 +1557,7 @@ function ProjectDetails() {
               boxShadow: '0 1px 4px rgba(0, 0, 0, 0.05)'
             }}>
               <p style={{ margin: '6px 0' }}>
-                <strong style={{ color: '#0a9396', fontWeight: '600' }}>Project Lead:</strong> {formData.lead}
+                <strong style={{ color: '#0a9396', fontWeight: '600' }}>Project Lead:</strong> {formData?.lead}
               </p>
             </div>
             <div style={{
@@ -780,7 +1568,7 @@ function ProjectDetails() {
               boxShadow: '0 1px 4px rgba(0, 0, 0, 0.05)'
             }}>
               <p style={{ margin: '6px 0' }}>
-                <strong style={{ color: '#0a9396', fontWeight: '600' }}>Company:</strong> {formData.company}
+                <strong style={{ color: '#0a9396', fontWeight: '600' }}>Company:</strong> {formData?.company}
               </p>
             </div>
             <div style={{
@@ -791,7 +1579,7 @@ function ProjectDetails() {
               boxShadow: '0 1px 4px rgba(0, 0, 0, 0.05)'
             }}>
               <p style={{ margin: '6px 0' }}>
-                <strong style={{ color: '#0a9396', fontWeight: '600' }}>Team Members:</strong> {formData.team.join(', ')}
+                <strong style={{ color: '#0a9396', fontWeight: '600' }}>Team Members:</strong> {formData?.team.join(', ')}
               </p>
             </div>
             <div style={{
@@ -802,8 +1590,49 @@ function ProjectDetails() {
               boxShadow: '0 1px 4px rgba(0, 0, 0, 0.05)'
             }}>
               <p style={{ margin: '6px 0' }}>
-                <strong style={{ color: '#0a9396', fontWeight: '600' }}>Revenue:</strong> ₹{formData.revenue.toLocaleString('en-IN')}
+                <strong style={{ color: '#0a9396', fontWeight: '600' }}>Revenue:</strong> ₹{formData?.revenue.toLocaleString('en-IN')}
               </p>
+            </div>
+            <div style={{
+              backgroundColor: '#f7f9fc',
+              padding: '14px',
+              borderRadius: '8px',
+              marginBottom: '12px',
+              boxShadow: '0 1px 4px rgba(0, 0, 0, 0.05)'
+            }}>
+              <div style={{ margin: '6px 0' }}>
+                <strong style={{ color: '#0a9396', fontWeight: '600' }}>Expenses:</strong>
+                <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={openCapxModal}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#0a9396',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: '600'
+                    }}
+                  >CAPX</button>
+                  <button
+                    type="button"
+                    onClick={openOpxModal}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#0a9396',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: '600'
+                    }}
+                  >OPX</button>
+                </div>
+              </div>
             </div>
             <div style={{
               display: 'flex',
@@ -818,7 +1647,7 @@ function ProjectDetails() {
                 boxShadow: '0 1px 4px rgba(0, 0, 0, 0.05)'
               }}>
                 <p style={{ margin: '6px 0' }}>
-                  <strong style={{ color: '#0a9396', fontWeight: '600' }}>Start Date:</strong> {new Date(formData.startDate).toLocaleString('en-IN',{
+                  <strong style={{ color: '#0a9396', fontWeight: '600' }}>Start Date:</strong> {formData && new Date(formData.startDate).toLocaleString('en-IN', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric'
@@ -834,7 +1663,7 @@ function ProjectDetails() {
                 boxShadow: '0 1px 4px rgba(0, 0, 0, 0.05)'
               }}>
                 <p style={{ margin: '6px 0' }}>
-                  <strong style={{ color: '#0a9396', fontWeight: '600' }}>End Date:</strong> {new Date(formData.endDate).toLocaleString('en-IN',{
+                  <strong style={{ color: '#0a9396', fontWeight: '600' }}>End Date:</strong> {formData && new Date(formData.endDate).toLocaleString('en-IN', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric'

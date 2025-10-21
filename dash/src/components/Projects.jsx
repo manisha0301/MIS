@@ -10,7 +10,7 @@ function Projects() {
     try {
       const response = await fetch('http://localhost:5000/api/projects');
       const data = await response.json();
-      console.log("data:", data)
+      // console.log("data:", data)
       setProjects(data);
     } catch (error) {
       console.error('Error fetching projects:', error);

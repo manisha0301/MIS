@@ -164,6 +164,122 @@ const ProjectController = {
     } catch (error) {
       res.status(500).json({ message: 'Error deleting project', error: error.message });
     }
+  },
+
+  // Create CAPX
+  createCapx: async (req, res) => {
+    try {
+      const { projectId, item = '', amount = 0, date = null, description = '' } = req.body;
+      if (!projectId) {
+        return res.status(400).json({ message: 'Please provide projectId.' });
+      }
+      const capx = {
+        item,
+        amount: parseFloat(amount),
+        date: date || null, // Allow null date for initial creation
+        description
+      };
+      const newCapx = await ProjectModel.createCapx(projectId, capx);
+      res.status(201).json({ message: 'CAPX created successfully!', capx: newCapx });
+    } catch (error) {
+      res.status(500).json({ message: 'Error creating CAPX', error: error.message });
+    }
+  },
+
+  // Create OPX
+  createOpx: async (req, res) => {
+    try {
+      const { projectId, item = '', amount = 0, date = null, description = '' } = req.body;
+      if (!projectId) {
+        return res.status(400).json({ message: 'Please provide projectId.' });
+      }
+      const opx = {
+        item,
+        amount: parseFloat(amount),
+        date: date || null, // Allow null date for initial creation
+        description
+      };
+      const newOpx = await ProjectModel.createOpx(projectId, opx);
+      res.status(201).json({ message: 'OPX created successfully!', opx: newOpx });
+    } catch (error) {
+      res.status(500).json({ message: 'Error creating OPX', error: error.message });
+    }
+  },
+
+  // Update CAPX
+  updateCapx: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { item, amount, date, description } = req.body;
+      if (!item || !amount || !date) {
+        return res.status(400).json({ message: 'Please provide all required fields: item, amount, date.' });
+      }
+      const capx = {
+        item,
+        amount: parseFloat(amount),
+        date,
+        description
+      };
+      const updatedCapx = await ProjectModel.updateCapx(id, capx);
+      if (!updatedCapx) {
+        return res.status(404).json({ message: 'CAPX not found' });
+      }
+      res.status(200).json({ message: 'CAPX updated successfully!', capx: updatedCapx });
+    } catch (error) {
+      res.status(500).json({ message: 'Error updating CAPX', error: error.message });
+    }
+  },
+
+  // Update OPX
+  updateOpx: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { item, amount, date, description } = req.body;
+      if (!item || !amount || !date) {
+        return res.status(400).json({ message: 'Please provide all required fields: item, amount, date.' });
+      }
+      const opx = {
+        item,
+        amount: parseFloat(amount),
+        date,
+        description
+      };
+      const updatedOpx = await ProjectModel.updateOpx(id, opx);
+      if (!updatedOpx) {
+        return res.status(404).json({ message: 'OPX not found' });
+      }
+      res.status(200).json({ message: 'OPX updated successfully!', opx: updatedOpx });
+    } catch (error) {
+      res.status(500).json({ message: 'Error updating OPX', error: error.message });
+    }
+  },
+
+  // Delete CAPX
+  deleteCapx: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deletedCapx = await ProjectModel.deleteCapx(id);
+      if (!deletedCapx) {
+        return res.status(404).json({ message: 'CAPX not found' });
+      }
+      res.status(200).json({ message: 'CAPX deleted successfully!' });
+    } catch (error) {
+      res.status(500).json({ message: 'Error deleting CAPX', error: error.message });
+    }
+  },
+
+  // Delete OPX
+  deleteOpx: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deletedOpx = await ProjectModel.deleteOpx(id);
+      if (!deletedOpx) {
+        return res.status(404).json({ message: 'OPX not found' });
+      }
+      res.status(200).json({ message: 'OPX deleted successfully!' });
+    } catch (error) {
+      res.status(500).json({ message: 'Error deleting OPX', error: error.message });
+    }
   }
 };
 

@@ -29,7 +29,49 @@ const ProjectModel = {
     }
   },
 
-  // Create a new project
+  // Create CAPX table
+  createCapxTable: async () => {
+    const query = `
+      CREATE TABLE IF NOT EXISTS capx (
+        id SERIAL PRIMARY KEY,
+        project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
+        item VARCHAR(255) NOT NULL DEFAULT '',
+        amount FLOAT NOT NULL DEFAULT 0,
+        date DATE,
+        description TEXT
+      );
+    `;
+    try {
+      await pool.query(query);
+      console.log('CAPX table created or already exists');
+    } catch (error) {
+      console.error('Error creating CAPX table:', error);
+      throw error;
+    }
+  },
+
+  // Create OPX table
+  createOpxTable: async () => {
+    const query = `
+      CREATE TABLE IF NOT EXISTS opx (
+        id SERIAL PRIMARY KEY,
+        project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
+        item VARCHAR(255) NOT NULL DEFAULT '',
+        amount FLOAT NOT NULL DEFAULT 0,
+        date DATE,
+        description TEXT
+      );
+    `;
+    try {
+      await pool.query(query);
+      console.log('OPX table created or already exists');
+    } catch (error) {
+      console.error('Error creating OPX table:', error);
+      throw error;
+    }
+  },
+
+  // Create a new project (unchanged)
   createProject: async (project) => {
     const {
       name, description, lead, team, startDate, endDate,
@@ -69,12 +111,22 @@ const ProjectModel = {
     }
   },
 
-  // Get project by ID
+  // Get project by ID with CAPX and OPX
   getProjectById: async (id) => {
-    const query = 'SELECT * FROM projects WHERE id = $1;';
+    const projectQuery = 'SELECT * FROM projects WHERE id = $1;';
+    const capxQuery = 'SELECT * FROM capx WHERE project_id = $1;';
+    const opxQuery = 'SELECT * FROM opx WHERE project_id = $1;';
     try {
-      const result = await pool.query(query, [id]);
-      return result.rows[0];
+      const projectResult = await pool.query(projectQuery, [id]);
+      const capxResult = await pool.query(capxQuery, [id]);
+      const opxResult = await pool.query(opxQuery, [id]);
+      const project = projectResult.rows[0];
+      if (!project) return null;
+      return {
+        ...project,
+        capx: capxResult.rows,
+        opx: opxResult.rows
+      };
     } catch (error) {
       console.error('Error fetching project by ID:', error);
       throw error;
@@ -110,7 +162,7 @@ const ProjectModel = {
     }
   },
 
-  // Delete a project
+  // Delete a project (unchanged, CASCADE will handle CAPX/OPX deletion)
   deleteProject: async (id) => {
     const query = 'DELETE FROM projects WHERE id = $1 RETURNING *;';
     try {
@@ -118,6 +170,100 @@ const ProjectModel = {
       return result.rows[0];
     } catch (error) {
       console.error('Error deleting project:', error);
+      throw error;
+    }
+  },
+
+  // Create a CAPX entry
+  createCapx: async (projectId, capx) => {
+    const { item, amount, date, description } = capx;
+    const query = `
+      INSERT INTO capx (project_id, item, amount, date, description)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *;
+    `;
+    try {
+      const result = await pool.query(query, [projectId, item, amount, date || null, description]);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error creating CAPX:', error);
+      throw error;
+    }
+  },
+
+  // Create an OPX entry
+  createOpx: async (projectId, opx) => {
+    const { item, amount, date, description } = opx;
+    const query = `
+      INSERT INTO opx (project_id, item, amount, date, description)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *;
+    `;
+    try {
+      const result = await pool.query(query, [projectId, item, amount, date || null, description]);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error creating OPX:', error);
+      throw error;
+    }
+  },
+
+  // Update a CAPX entry
+  updateCapx: async (id, capx) => {
+    const { item, amount, date, description } = capx;
+    const query = `
+      UPDATE capx
+      SET item = $1, amount = $2, date = $3, description = $4
+      WHERE id = $5
+      RETURNING *;
+    `;
+    try {
+      const result = await pool.query(query, [item, amount, date, description, id]);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error updating CAPX:', error);
+      throw error;
+    }
+  },
+
+  // Update an OPX entry
+  updateOpx: async (id, opx) => {
+    const { item, amount, date, description } = opx;
+    const query = `
+      UPDATE opx
+      SET item = $1, amount = $2, date = $3, description = $4
+      WHERE id = $5
+      RETURNING *;
+    `;
+    try {
+      const result = await pool.query(query, [item, amount, date, description, id]);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error updating OPX:', error);
+      throw error;
+    }
+  },
+
+  // Delete a CAPX entry
+  deleteCapx: async (id) => {
+    const query = 'DELETE FROM capx WHERE id = $1 RETURNING *;';
+    try {
+      const result = await pool.query(query, [id]);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error deleting CAPX:', error);
+      throw error;
+    }
+  },
+
+  // Delete an OPX entry
+  deleteOpx: async (id) => {
+    const query = 'DELETE FROM opx WHERE id = $1 RETURNING *;';
+    try {
+      const result = await pool.query(query, [id]);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error deleting OPX:', error);
       throw error;
     }
   }

@@ -9,4 +9,14 @@ router.get('/:id', ProjectController.getProjectById); // Get project by ID
 router.put('/:id', ProjectController.updateProject); // Update a project
 router.delete('/:id', ProjectController.deleteProject); // Delete a project
 
+// Routes for CAPX
+router.post('/:projectId/capx', ProjectController.createCapx); // Create CAPX
+router.put('/capx/:id', ProjectController.updateCapx); // Update CAPX
+router.delete('/capx/:id', ProjectController.deleteCapx); // Delete CAPX
+
+// Routes for OPX
+router.post('/:projectId/opx', ProjectController.createOpx); // Create OPX
+router.put('/opx/:id', ProjectController.updateOpx); // Update OPX
+router.delete('/opx/:id', ProjectController.deleteOpx); // Delete OPX
+
 module.exports = router;
