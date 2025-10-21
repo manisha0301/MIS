@@ -75,6 +75,13 @@ function Sidebar() {
           >
             <FaMoneyBillWave style={{ marginRight: '8px' }} /> Revenue
           </NavLink>
+          <NavLink
+            to="/bill-expenditure"
+            className={({ isActive }) => `sidebar-button ${isActive ? 'active' : ''}`}
+            onClick={() => setIsOpen(false)}
+          >
+            <FaMoneyBillWave style={{ marginRight: '8px' }} /> Bill Expenditure
+          </NavLink>
           {user && (user.role === 'Admin' || user.role === 'Super-Admin') && (
           <NavLink
             to="/admin"

@@ -14,6 +14,7 @@ import Projects from './components/Projects.jsx';
 import ProjectDetails from './components/ProjectDetails.jsx';
 import Revenue from './components/Revenue.jsx';
 import AddProject from './components/AddProject.jsx';
+import BillExpenditure from './components/BillExpenditure.jsx';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -49,6 +50,7 @@ function App() {
               <Route path="/projects/:id" element={<ProjectDetails />} />
               <Route path="/projects" element={<Projects />} />
               <Route path="/revenue" element={<Revenue />} />
+              <Route path="/bill-expenditure" element={<BillExpenditure />} />
             </Routes>
           </div>
         </div>
