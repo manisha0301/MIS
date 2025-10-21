@@ -78,10 +78,6 @@ const billExpenditureController = {
     try {
       const { transactionId } = req.params;
       const bankDetails = req.body;
-      const requiredFields = ['accountNo', 'ifscCode', 'relationshipManager', 'rmName', 'rmEmail', 'rmMobile', 'branchName'];
-      if (requiredFields.some(field => !bankDetails[field])) {
-        return res.status(400).json({ error: 'All bank details fields are required' });
-      }
       const updatedTransaction = await billExpenditureModel.updateBankDetails(transactionId, bankDetails);
       res.status(200).json({ message: 'Bank details updated successfully', transaction: updatedTransaction });
     } catch (error) {

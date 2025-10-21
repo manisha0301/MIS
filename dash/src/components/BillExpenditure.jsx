@@ -1,34 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 
 function BillExpenditure() {
   const [activeTab, setActiveTab] = useState('transactionhistory');
-  const [transactions, setTransactions] = useState([
-    {
-      id: 1,
-      transactionId: 'S29594041',
-      valueDate: '2025-10-06',
-      postedDate: '2025-10-06T09:49:30',
-      chequeNo: '-',
-      description: 'INF/INFT/041835647161/FFS Reimburseme/ROJALIN',
-      crDr: 'DR',
-      amount: 31577,
-      balance: -6336595.7,
-      bankDetails: {}
-    },
-    {
-      id: 2,
-      transactionId: 'S32515691',
-      valueDate: '2025-10-06',
-      postedDate: '2025-10-06T14:12:27',
-      chequeNo: '-',
-      description: 'MMT/IMPS/527914230076/Sponsorship for/VSSUT/CNRB0018062',
-      crDr: 'DR',
-      amount: 100000,
-      balance: -6436595.7,
-      bankDetails: {}
-    },
-  ]);
+  const [transactions, setTransactions] = useState([]);
   const [notification, setNotification] = useState({ message: '', visible: false });
   const [isBankModalOpen, setIsBankModalOpen] = useState(false);
   const [selectedTransactionId, setSelectedTransactionId] = useState(null);
@@ -41,7 +16,8 @@ function BillExpenditure() {
     rmMobile: '',
     branchName: ''
   });
-  const user = { role: 'Admin' };
+  const [editField, setEditField] = useState(null); // Track which field is being edited
+  const user = JSON.parse(sessionStorage.getItem('user')); // Replace with actual user auth logic
   const fileInputRef = useRef(null);
 
   const formatDateToIST = (utcDate) => {
@@ -69,44 +45,58 @@ function BillExpenditure() {
     });
   };
 
-  const handleExcelImport = (e) => {
+  const fetchTransactions = async () => {
+    try {
+      const token = sessionStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/bill-expenditures', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setTransactions(data);
+      } else {
+        setNotification({ message: data.error || 'Failed to fetch transactions', visible: true });
+        setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+      }
+    } catch (error) {
+      setNotification({ message: 'Error fetching transactions', visible: true });
+      setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+    }
+  };
+
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  const handleExcelImport = async (e) => {
     const file = e.target.files[0];
     if (file && (file.name.endsWith('.xls') || file.name.endsWith('.xlsx'))) {
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        try {
-          const bstr = evt.target.result;
-          const wb = XLSX.read(bstr, { type: 'binary' });
-          const wsname = wb.SheetNames[0];
-          const ws = wb.Sheets[wsname];
-          const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
-
-          const newTransactions = data.slice(1).map((row, index) => ({
-            id: transactions.length + index + 1,
-            transactionId: row[1] || '',
-            valueDate: row[2] || '',
-            postedDate: row[3] || '',
-            chequeNo: row[4] || '-',
-            description: row[5] || '',
-            crDr: row[6] || '',
-            amount: parseFloat(row[7]) || 0,
-            balance: parseFloat(row[8]) || 0,
-            bankDetails: {}
-          }));
-
-          setTransactions((prev) => [...prev, ...newTransactions]);
+      const formData = new FormData();
+      formData.append('file', file);
+      try {
+        const token = sessionStorage.getItem('token');
+        const response = await fetch('http://localhost:5000/api/bill-expenditures/import', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
+          body: formData
+        });
+        const data = await response.json();
+        if (response.ok) {
           setNotification({ message: 'Excel file imported successfully!', visible: true });
           setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
-        } catch (err) {
-          setNotification({ message: 'Error reading Excel file', visible: true });
+          fetchTransactions();
+        } else {
+          setNotification({ message: data.error || 'Error importing Excel file', visible: true });
           setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
         }
-      };
-      reader.onerror = () => {
-        setNotification({ message: 'Error reading Excel file', visible: true });
+      } catch (error) {
+        setNotification({ message: 'Error importing Excel file', visible: true });
         setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
-      };
-      reader.readAsBinaryString(file);
+      }
       e.target.value = null;
     } else {
       setNotification({ message: 'Please upload a valid Excel file (.xls or .xlsx)', visible: true });
@@ -125,6 +115,7 @@ function BillExpenditure() {
       rmMobile: '',
       branchName: ''
     });
+    setEditField(null); // Reset edit mode
     setIsBankModalOpen(true);
   };
 
@@ -133,32 +124,131 @@ function BillExpenditure() {
     setBankDetails({ ...bankDetails, [name]: value });
   };
 
-  const handleBankDetailsSubmit = (e) => {
+  const handleBankDetailsSubmit = async (e) => {
     e.preventDefault();
-    const requiredFields = ['accountNo', 'ifscCode', 'relationshipManager', 'rmName', 'rmEmail', 'rmMobile', 'branchName'];
-    if (requiredFields.some(field => !bankDetails[field])) {
-      setNotification({ message: 'Please fill all required fields.', visible: true });
+    
+    try {
+      const token = sessionStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/bill-expenditures/${selectedTransactionId}/bank-details`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(bankDetails)
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setTransactions(prev => prev.map(transaction =>
+          transaction.id === selectedTransactionId
+            ? { ...transaction, bank_details: data.transaction.bank_details }
+            : transaction
+        ));
+        setIsBankModalOpen(false);
+        setBankDetails({
+          accountNo: '',
+          ifscCode: '',
+          relationshipManager: '',
+          rmName: '',
+          rmEmail: '',
+          rmMobile: '',
+          branchName: ''
+        });
+        setEditField(null);
+        setNotification({ message: 'Bank details saved successfully!', visible: true });
+        setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+      } else {
+        setNotification({ message: data.error || 'Failed to save bank details', visible: true });
+        setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+      }
+    } catch (error) {
+      setNotification({ message: 'Error saving bank details', visible: true });
       setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
-      return;
     }
+  };
 
-    setTransactions(prev => prev.map(transaction =>
-      transaction.id === selectedTransactionId
-        ? { ...transaction, bankDetails }
-        : transaction
-    ));
-    setIsBankModalOpen(false);
-    setBankDetails({
-      accountNo: '',
-      ifscCode: '',
-      relationshipManager: '',
-      rmName: '',
-      rmEmail: '',
-      rmMobile: '',
-      branchName: ''
-    });
-    setNotification({ message: 'Bank details saved successfully!', visible: true });
-    setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+  const hasBankDetails = () => {
+    return Object.values(bankDetails).some(value => value && value.trim() !== '');
+  };
+
+  const renderInputField = (label, field, type = 'text') => (
+    <div style={{ marginBottom: '15px' }}>
+      <label style={{ display: 'block', color: '#1e293b', fontWeight: '500', marginBottom: '5px' }}>
+        {label}:
+      </label>
+      <input
+        type={type}
+        name={field}
+        value={bankDetails[field]}
+        onChange={handleBankDetailsInputChange}
+        style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '14px' }}
+      />
+    </div>
+  );
+
+  const renderBankDetailField = (label, field, type = 'text') => {
+    const isEditing = editField === field;
+    return (
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '15px',
+          position: 'relative'
+        }}
+        onMouseEnter={(e) => {
+          if (hasBankDetails() && !isEditing) {
+            e.currentTarget.querySelector('.edit-button').style.opacity = '1';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isEditing) {
+            e.currentTarget.querySelector('.edit-button').style.opacity = '0';
+          }
+        }}
+      >
+        <div style={{ flex: 1 }}>
+          <label style={{ display: 'block', color: '#1e293b', fontWeight: '500', marginBottom: '5px' }}>
+            {label}:
+          </label>
+          {isEditing ? (
+            <input
+              type={type}
+              name={field}
+              value={bankDetails[field]}
+              onChange={handleBankDetailsInputChange}
+              style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '14px' }}
+            />
+          ) : (
+            <span style={{ color: '#1e293b', fontSize: '14px' }}>
+              {bankDetails[field] || 'Not provided'}
+            </span>
+          )}
+        </div>
+        {hasBankDetails() && !isEditing && (
+          <button
+            className="edit-button"
+            onClick={() => setEditField(field)}
+            style={{
+              opacity: 0,
+              backgroundColor: '#0a9396',
+              color: 'white',
+              padding: '5px 10px',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '12px',
+              position: 'absolute',
+              right: '10px',
+              transition: 'opacity 0.2s'
+            }}
+          >
+            Edit
+          </button>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -228,90 +318,27 @@ function BillExpenditure() {
               Bank Details
             </h2>
             <form onSubmit={handleBankDetailsSubmit}>
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', color: '#1e293b', fontWeight: '500', marginBottom: '5px' }}>
-                  Account Number:
-                </label>
-                <input
-                  type="text"
-                  name="accountNo"
-                  value={bankDetails.accountNo}
-                  onChange={handleBankDetailsInputChange}
-                  style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '14px' }}
-                />
-              </div>
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', color: '#1e293b', fontWeight: '500', marginBottom: '5px' }}>
-                  IFSC Code:
-                </label>
-                <input
-                  type="text"
-                  name="ifscCode"
-                  value={bankDetails.ifscCode}
-                  onChange={handleBankDetailsInputChange}
-                  style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '14px' }}
-                />
-              </div>
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', color: '#1e293b', fontWeight: '500', marginBottom: '5px' }}>
-                  Relationship Manager:
-                </label>
-                <input
-                  type="text"
-                  name="relationshipManager"
-                  value={bankDetails.relationshipManager}
-                  onChange={handleBankDetailsInputChange}
-                  style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '14px' }}
-                />
-              </div>
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', color: '#1e293b', fontWeight: '500', marginBottom: '5px' }}>
-                  Name:
-                </label>
-                <input
-                  type="text"
-                  name="rmName"
-                  value={bankDetails.rmName}
-                  onChange={handleBankDetailsInputChange}
-                  style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '14px' }}
-                />
-              </div>
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', color: '#1e293b', fontWeight: '500', marginBottom: '5px' }}>
-                  Email:
-                </label>
-                <input
-                  type="email"
-                  name="rmEmail"
-                  value={bankDetails.rmEmail}
-                  onChange={handleBankDetailsInputChange}
-                  style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '14px' }}
-                />
-              </div>
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', color: '#1e293b', fontWeight: '500', marginBottom: '5px' }}>
-                  Mobile:
-                </label>
-                <input
-                  type="tel"
-                  name="rmMobile"
-                  value={bankDetails.rmMobile}
-                  onChange={handleBankDetailsInputChange}
-                  style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '14px' }}
-                />
-              </div>
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ display: 'block', color: '#1e293b', fontWeight: '500', marginBottom: '5px' }}>
-                  Branch Name:
-                </label>
-                <input
-                  type="text"
-                  name="branchName"
-                  value={bankDetails.branchName}
-                  onChange={handleBankDetailsInputChange}
-                  style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '14px' }}
-                />
-              </div>
+              {hasBankDetails() ? (
+                <>
+                  {renderBankDetailField('Account Number', 'accountNo')}
+                  {renderBankDetailField('IFSC Code', 'ifscCode')}
+                  {renderBankDetailField('Relationship Manager', 'relationshipManager')}
+                  {renderBankDetailField('Name', 'rmName')}
+                  {renderBankDetailField('Email', 'rmEmail', 'email')}
+                  {renderBankDetailField('Mobile', 'rmMobile', 'tel')}
+                  {renderBankDetailField('Branch Name', 'branchName')}
+                </>
+              ) : (
+                <>
+                  {renderInputField('Account Number', 'accountNo')}
+                  {renderInputField('IFSC Code', 'ifscCode')}
+                  {renderInputField('Relationship Manager', 'relationshipManager')}
+                  {renderInputField('Name', 'rmName')}
+                  {renderInputField('Email', 'rmEmail', 'email')}
+                  {renderInputField('Mobile', 'rmMobile', 'tel')}
+                  {renderInputField('Branch Name', 'branchName')}
+                </>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
                 <button
                   type="submit"
@@ -344,6 +371,7 @@ function BillExpenditure() {
                       rmMobile: '',
                       branchName: ''
                     });
+                    setEditField(null);
                   }}
                   style={{
                     backgroundColor: '#aecfeeff',
@@ -425,18 +453,18 @@ function BillExpenditure() {
               {transactions.map((transaction, index) => (
                 <tr key={transaction.id}>
                   <td>{index + 1}</td>
-                  <td>{transaction.transactionId}</td>
-                  <td>{formatDateToIST(transaction.valueDate)}</td>
-                  <td>{formatDateTimeToIST(transaction.postedDate)}</td>
-                  <td>{transaction.chequeNo}</td>
+                  <td>{transaction.transaction_id}</td>
+                  <td>{formatDateToIST(transaction.value_date)}</td>
+                  <td>{formatDateTimeToIST(transaction.posted_date)}</td>
+                  <td>{transaction.cheque_no}</td>
                   <td>{transaction.description}</td>
-                  <td>{transaction.crDr}</td>
-                  <td>₹{transaction.amount.toLocaleString('en-IN')}</td>
-                  <td>₹{transaction.balance.toLocaleString('en-IN')}</td>
+                  <td>{transaction.cr_dr}</td>
+                  <td>₹{parseFloat(transaction.amount).toLocaleString('en-IN')}</td>
+                  <td>₹{parseFloat(transaction.balance).toLocaleString('en-IN')}</td>
                   <td>
                     <button
                       className="action-button"
-                      onClick={() => handleBankDetailsClick(transaction.id, transaction.bankDetails)}
+                      onClick={() => handleBankDetailsClick(transaction.id, transaction.bank_details)}
                     >
                       Bank Details
                     </button>

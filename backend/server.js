@@ -6,17 +6,20 @@ const invoiceRoutes = require('./routes/invoiceRoutes');
 const expenditureRoutes = require('./routes/expenditureRoutes');
 const salesRoutes = require('./routes/salesRoutes');
 const projectRoutes = require('./routes/projectRoutes');
+const billExpenditureRoutes = require('./routes/billExpenditureRoutes');
 const productModel = require('./models/productModel');
 const customerModel = require('./models/customerModel');
 const invoiceModel = require('./models/invoiceModel');
 const expenditureModel = require('./models/expenditureModel');
 const salesModel = require('./models/salesModel');
 const projectModel = require('./models/projectModel');
+const billExpenditureModel = require('./models/billExpenditureModel');
 const path = require('path');
 const authRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const userModel = require('./models/userModel');
 const bcrypt = require('bcryptjs');
+
 
 const app = express();
 
@@ -36,6 +39,7 @@ app.use('/api/invoices', invoiceRoutes);
 app.use('/api/expenditures', expenditureRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/bill-expenditures', billExpenditureRoutes);
 
 // Initialize database tables
 const initializeDatabase = async () => {
@@ -49,6 +53,7 @@ const initializeDatabase = async () => {
     await projectModel.createProjectsTable();
     await projectModel.createCapxTable();
     await projectModel.createOpxTable();
+    await billExpenditureModel.createBillExpendituresTable();
 
     // Create default admin if not exists
     const admin = await userModel.findUserByUsername("admin");
