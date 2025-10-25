@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 function Projects() {
+  const navigate = useNavigate();
   const [projects, setProjects] = useState([]);
   const user = JSON.parse(sessionStorage.getItem('user'))
 
@@ -84,8 +85,8 @@ function Projects() {
       }}>
         {projects.length > 0 ? (
           projects.map(project => (
-            <Link
-              to={`/projects/${project.id}`}
+            <div
+              // to={`/projects/${project.id}`}
               key={project.id}
               className="project-card"
               style={{
@@ -155,7 +156,7 @@ function Projects() {
                   margin: 0
                 }}>Lead: {project.lead}</p>
               </div>
-              <div style={{
+              {/* <div style={{
                 padding: '12px',
                 borderRadius: '8px',
                 border: '1px solid #e2e8f0',
@@ -169,8 +170,61 @@ function Projects() {
                   margin: 0,
                   fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif'
                 }}>{project.description.substring(0, 80)}...</p>
+              </div> */}
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
+                flexDirection:'row', 
+                gap:'10px' 
+                }}
+              >
+              <button
+                style={{
+                  marginTop: '16px',
+                  padding: '10px 10px',
+                  backgroundColor: '#0a9396',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '600'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#005f73';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#0a9396';
+                }}
+                onClick={() => navigate(`/projects/bdexpenditure/${project.id}`)}
+              >
+                BD Expenditure
+              </button>
+
+              <button
+                style={{
+                  marginTop: '16px',
+                  padding: '10px 10px',
+                  backgroundColor: '#0a9396',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '600'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#005f73';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#0a9396';
+                }}
+                onClick={() => navigate(`/projects/${project.id}`)}
+              >
+                Execution Expenditure
+              </button>
               </div>
-            </Link>
+            </div>
           ))
         ) : (
           <p style={{

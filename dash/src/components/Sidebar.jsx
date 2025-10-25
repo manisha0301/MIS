@@ -38,7 +38,7 @@ function Sidebar() {
             className={({ isActive }) => `sidebar-button ${isActive ? 'active' : ''}`}
             onClick={() => setIsOpen(false)}
           >
-            <FaUsers style={{ marginRight: '8px' }} /> Customers
+            <FaUsers style={{ marginRight: '8px' }} /> Client Analysis
           </NavLink>
           <NavLink
             to="/sales-analytics"
@@ -52,7 +52,7 @@ function Sidebar() {
             className={({ isActive }) => `sidebar-button ${isActive ? 'active' : ''}`}
             onClick={() => setIsOpen(false)}
           >
-            <FaDollarSign style={{ marginRight: '8px' }} /> Expenditure
+            <FaDollarSign style={{ marginRight: '8px' }} /> Expenditure Analysis
           </NavLink>
           <NavLink
             to="/invoices"
@@ -66,7 +66,7 @@ function Sidebar() {
             className={({ isActive }) => `sidebar-button ${isActive ? 'active' : ''}`}
             onClick={() => setIsOpen(false)}
           >
-            <FaProjectDiagram style={{ marginRight: '8px' }} /> Projects
+            <FaProjectDiagram style={{ marginRight: '8px' }} /> Project Analysis
           </NavLink>
           <NavLink
             to="/revenue"
@@ -80,7 +80,7 @@ function Sidebar() {
             className={({ isActive }) => `sidebar-button ${isActive ? 'active' : ''}`}
             onClick={() => setIsOpen(false)}
           >
-            <FaMoneyBillWave style={{ marginRight: '8px' }} /> Bill Expenditure
+            <FaMoneyBillWave style={{ marginRight: '8px' }} /> Beneficiary Bank Information
           </NavLink>
           {user && (user.role === 'Admin' || user.role === 'Super-Admin') && (
           <NavLink

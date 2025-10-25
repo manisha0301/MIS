@@ -19,4 +19,9 @@ router.post('/:projectId/opx', ProjectController.createOpx); // Create OPX
 router.put('/opx/:id', ProjectController.updateOpx); // Update OPX
 router.delete('/opx/:id', ProjectController.deleteOpx); // Delete OPX
 
+// BD-Expenditure
+router.post('/:projectId/bdexp',   ProjectController.createBdexp);
+router.get('/:projectId/bdexp',    ProjectController.getBdexpByProjectId);
+router.delete('/bdexp/:id',        ProjectController.deleteBdexp);
+
 module.exports = router;

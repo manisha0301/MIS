@@ -815,45 +815,64 @@ function ProjectDetails() {
                 ))}
               </tbody>
             </table>
-            <div style={{ marginTop: '16px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              {isEditing && (
+            <div style={{ display: "flex", flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px' }}>
+              {!isEditing && (
+              <div >
+                <div
+                style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#0a9396',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: '600'
+                    }}
+                    >
+                      Total : ₹{((tempCapxData || capxData).reduce((sum, item) => sum + (item.amount || 0), 0)).toLocaleString('en-IN')}
+                    </div>
+              </div>
+              )}
+              <div style={{ marginTop: '16px', gap: '12px', display: 'flex', justifyContent: 'flex-end' }}>
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={addCapxRow}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#0a9396',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: '600'
+                    }}
+                  >Add Row</button>
+                )}
+                {(isEditing) && (
+                  <button
+                    onClick={saveCapxChanges}
+                    style={{ padding: '8px 16px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '6px' }}
+                  >
+                    Save
+                  </button>
+                  )}
                 <button
                   type="button"
-                  onClick={addCapxRow}
+                  onClick={isEditing ? cancelCapxChanges : () => setCapxModalOpen(false)}
                   style={{
                     padding: '8px 16px',
-                    backgroundColor: '#0a9396',
-                    color: 'white',
+                    backgroundColor: '#aecfeeff',
+                    color: '#1e293b',
                     border: 'none',
                     borderRadius: '6px',
                     cursor: 'pointer',
                     fontSize: '12px',
                     fontWeight: '600'
                   }}
-                >Add Row</button>
-              )}
-              {(isEditing) && (
-                <button
-                  onClick={saveCapxChanges}
-                  style={{ padding: '8px 16px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '6px' }}
-                >
-                  Save
-                </button>
-                )}
-              <button
-                type="button"
-                onClick={isEditing ? cancelCapxChanges : () => setCapxModalOpen(false)}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: '#aecfeeff',
-                  color: '#1e293b',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  fontWeight: '600'
-                }}
-              >Close</button>
+                >Close</button>
+              </div>
             </div>
           </div>
         </div>
@@ -963,46 +982,65 @@ function ProjectDetails() {
                 ))}
               </tbody>
             </table>
-            <div style={{ marginTop: '16px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              {isEditing && (
+            <div style={{ display: "flex", flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px' }}>
+              {!isEditing && (
+              <div >
+                <div
+                style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#0a9396',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: '600'
+                    }}
+                    >
+                      Total : ₹{((tempOpxData || opxData).reduce((sum, item) => sum + (item.amount || 0), 0)).toLocaleString('en-IN')}
+                    </div>
+              </div>
+              )}
+              <div style={{ marginTop: '16px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={addOpxRow}
+                    style={{
+                      padding: '8px 16px',
+                      backgroundColor: '#0a9396',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: '600'
+                    }}
+                  >Add Row</button>
+                )}
+                {(isEditing) && (
+                  <button
+                    onClick={saveOpxChanges}
+                    style={{ padding: '8px 16px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '6px' }}
+                  >
+                    Save
+                  </button>
+                  )}
                 <button
                   type="button"
-                  onClick={addOpxRow}
+                  onClick={isEditing ? cancelOpxChanges : () => setOpxModalOpen(false)}
                   style={{
                     padding: '8px 16px',
-                    backgroundColor: '#0a9396',
-                    color: 'white',
+                    backgroundColor: '#aecfeeff',
+                    color: '#1e293b',
                     border: 'none',
                     borderRadius: '6px',
                     cursor: 'pointer',
                     fontSize: '12px',
                     fontWeight: '600'
                   }}
-                >Add Row</button>
-              )}
-              {(isEditing) && (
-                <button
-                  onClick={saveOpxChanges}
-                  style={{ padding: '8px 16px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '6px' }}
-                >
-                  Save
-                </button>
-                )}
-              <button
-                type="button"
-                onClick={isEditing ? cancelOpxChanges : () => setOpxModalOpen(false)}
-                style={{
-                  padding: '8px 16px',
-                  backgroundColor: '#aecfeeff',
-                  color: '#1e293b',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  fontWeight: '600'
-                }}
-              >Close</button>
-            </div>
+                >Close</button>
+              </div>
+            </div>  
           </div>
         </div>
       )}

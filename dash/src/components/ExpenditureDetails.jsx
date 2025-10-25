@@ -46,6 +46,12 @@ function ExpenditureDetails() {
     0
   );
 
+  // Calculate total expenditure per category
+  const categoryTotals = filteredDetails.map(category => ({
+    category: category.category,
+    total: category.items.reduce((catSum, item) => catSum + item.amount, 0)
+  }));
+
   // Handle Excel import
   const handleImportExcel = (event) => {
     const file = event.target.files[0];
@@ -153,7 +159,7 @@ function ExpenditureDetails() {
   return (
     <div className="dashboard">
       <div className="header" style={{ padding: '20px' }}>
-        <h1 style={{ fontSize: '24px' }}>Expenditure Details</h1>
+        <h1 style={{ fontSize: '24px' }}>Expenditure Analysis</h1>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           {user && user.role === 'Admin' && (
           <button
@@ -209,6 +215,14 @@ function ExpenditureDetails() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
             <FaMoneyBillWave className="icon" />
             <p>₹{totalExpenditure.toLocaleString('en-IN')}</p>
+          </div>
+          <div style={{ marginTop: '10px' }}>
+            {categoryTotals.map(({ category, total }) => (
+              <div key={category} style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', margin: '5px ', borderBottomColor: '#bcc0c4ff', borderBottomWidth: '0.1px', borderBottomStyle: 'solid', paddingBottom: '4px' }}>
+                <span>{category}:</span>
+                <span>₹{total.toLocaleString('en-IN')}</span>
+              </div>
+            ))}
           </div>
         </div>
         {filteredDetails.length > 0 ? (

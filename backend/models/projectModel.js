@@ -71,6 +71,65 @@ const ProjectModel = {
     }
   },
 
+  createBdexpTable: async () => {
+    const query = `
+      CREATE TABLE IF NOT EXISTS bdexp (
+        id          SERIAL PRIMARY KEY,
+        project_id  INTEGER REFERENCES projects(id) ON DELETE CASCADE,
+        area        VARCHAR(100) NOT NULL,
+        date        DATE NOT NULL,
+        amount      FLOAT NOT NULL,
+        receipt     VARCHAR(255) NOT NULL   -- path inside /uploads/receipt
+      );
+    `;
+    try {
+      await pool.query(query);
+      console.log('BD-EXP table created or already exists');
+    } catch (error) {
+      console.error('Error creating BD-EXP table:', error);
+      throw error;
+    }
+  },
+
+  // CREATE
+  createBdexp: async (projectId, bdexp, receiptPath) => {
+    const { area, date, amount } = bdexp;
+    const q = `
+      INSERT INTO bdexp (project_id, area, date, amount, receipt)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *;
+    `;
+    const res = await pool.query(q, [projectId, area, date, amount, receiptPath]);
+    return res.rows[0];
+  },
+
+  // READ – all for a project
+  getBdexpByProjectId: async (projectId) => {
+    const q = 'SELECT * FROM bdexp WHERE project_id = $1 ORDER BY date DESC;';
+    const res = await pool.query(q, [projectId]);
+    return res.rows;
+  },
+
+  // UPDATE (not required for the UI you showed, but nice to have)
+  updateBdexp: async (id, bdexp, receiptPath) => {
+    const { area, date, amount } = bdexp;
+    const q = `
+      UPDATE bdexp
+      SET area = $1, date = $2, amount = $3, receipt = $4
+      WHERE id = $5
+      RETURNING *;
+    `;
+    const res = await pool.query(q, [area, date, amount, receiptPath, id]);
+    return res.rows[0];
+  },
+
+  // DELETE
+  deleteBdexp: async (id) => {
+    const q = 'DELETE FROM bdexp WHERE id = $1 RETURNING *;';
+    const res = await pool.query(q, [id]);
+    return res.rows[0];
+  },
+
   // Create a new project (unchanged)
   createProject: async (project) => {
     const {

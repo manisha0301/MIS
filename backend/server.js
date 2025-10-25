@@ -47,12 +47,14 @@ const initializeDatabase = async () => {
     await userModel.createUsersTable();
     await productModel.createProductsTable();
     await customerModel.createCustomersTable();
-    await invoiceModel.createInvoicesTable();
+    await invoiceModel.createSalesInvoicesTable();
+    await invoiceModel.createPurchaseInvoicesTable();
     await expenditureModel.createExpendituresTable();
     await salesModel.createSalesTables();
     await projectModel.createProjectsTable();
     await projectModel.createCapxTable();
     await projectModel.createOpxTable();
+    await projectModel.createBdexpTable();
     await billExpenditureModel.createBillExpendituresTable();
 
     // Create default admin if not exists

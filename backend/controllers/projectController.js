@@ -30,6 +30,28 @@ const upload = multer({
   }
 }).single('image');
 
+const receiptStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadPath = path.join(__dirname, '../uploads/receipt');
+    fs.mkdirSync(uploadPath, { recursive: true });   // <-- create if missing
+    cb(null, uploadPath);
+  },
+  filename: (req, file, cb) => {
+    const { projectId, area } = req.body;
+    const safeArea = (area || 'unknown').replace(/[^a-z0-9]/gi, '_');
+    const filename = `${projectId}-${safeArea}${path.extname(file.originalname)}`;
+    cb(null, filename);
+  }
+});
+
+const uploadReceipt = multer({
+  storage: receiptStorage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/pdf') return cb(null, true);
+    cb(new Error('Only PDF files are allowed!'));
+  }
+}).single('receiptProof');   // <-- name used in the form
+
 const ProjectController = {
   createProject: async (req, res) => {
     upload(req, res, async (err) => {
@@ -279,6 +301,60 @@ const ProjectController = {
       res.status(200).json({ message: 'OPX deleted successfully!' });
     } catch (error) {
       res.status(500).json({ message: 'Error deleting OPX', error: error.message });
+    }
+  },
+
+  createBdexp: async (req, res) => {
+    uploadReceipt(req, res, async (err) => {
+      if (err) return res.status(400).json({ message: err.message });
+
+      try {
+        const { projectId, area, date, amount } = req.body;
+        if (!projectId || !area || !date || !amount || !req.file) {
+          return res.status(400).json({ message: 'All fields + PDF are required' });
+        }
+
+        const receiptPath = `/uploads/receipt/${req.file.filename}`;
+
+        const newBdexp = await ProjectModel.createBdexp(
+          projectId,
+          { area, date, amount: parseFloat(amount) },
+          receiptPath
+        );
+
+        res.status(201).json({ message: 'BD-Expenditure added', bdexp: newBdexp });
+      } catch (e) {
+        res.status(500).json({ message: 'Server error', error: e.message });
+      }
+    });
+  },
+
+  // ---- GET ALL FOR A PROJECT ------------------------------------
+  getBdexpByProjectId: async (req, res) => {
+    try {
+      const { projectId } = req.params;
+      const list = await ProjectModel.getBdexpByProjectId(projectId);
+      res.json(list);
+    } catch (e) {
+      res.status(500).json({ message: 'Server error', error: e.message });
+    }
+  },
+
+  // ---- DELETE ---------------------------------------------------
+  deleteBdexp: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await ProjectModel.deleteBdexp(id);
+
+      if (!deleted) return res.status(404).json({ message: 'Not found' });
+
+      // remove the PDF file
+      const filePath = path.join(__dirname, '..', deleted.receipt);
+      fs.unlink(filePath, (err) => { if (err) console.error(err); });
+
+      res.json({ message: 'BD-Expenditure removed' });
+    } catch (e) {
+      res.status(500).json({ message: 'Server error', error: e.message });
     }
   }
 };
