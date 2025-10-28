@@ -537,7 +537,7 @@ function SalesAnalytics() {
       {error && <div style={{ color: 'red' }}>{error}</div>}
       {notification.visible && (
         <div style={{
-          minHeight: '100vh',
+          maxHeight: '100vh',
           position: 'fixed',
           top: '20px',
           right: '20px',

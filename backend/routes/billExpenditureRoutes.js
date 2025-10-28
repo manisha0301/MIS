@@ -1,13 +1,18 @@
+// backend/routes/billExpenditureRoutes.js
 const express = require('express');
 const router = express.Router();
-const billExpenditureController = require('../controllers/billExpenditureController');
-const authMiddleware = require('../middleware/authMiddleware');
 const multer = require('multer');
+const path = require('path');
+const { getTransactions, uploadStatement } = require('../controllers/billExpenditureController');
+const authMiddleware = require('../middleware/authMiddleware');
 
-const upload = multer({ storage: multer.memoryStorage() });
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, 'uploads/'),
+  filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname)),
+});
+const upload = multer({ storage });
 
-router.post('/import', upload.single('file'), billExpenditureController.importTransactions);
-router.get('/', billExpenditureController.getAllTransactions);
-router.put('/:transactionId/bank-details', billExpenditureController.updateBankDetails);
+router.get('/transactions', getTransactions);
+router.post('/upload', upload.single('statement'), uploadStatement);
 
 module.exports = router;

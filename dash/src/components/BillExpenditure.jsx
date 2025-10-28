@@ -1,58 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import * as XLSX from 'xlsx';
+import { Line } from 'react-chartjs-2';
 
 function BillExpenditure() {
   const [activeTab, setActiveTab] = useState('transactionhistory');
   const [selectedBank, setSelectedBank] = useState(null);
   const [selectedPeriod, setSelectedPeriod] = useState(null);
-  const [transactions, setTransactions] = useState([
-  {
-    id: 1,
-    transaction_id: 'TXN001',
-    value_date: '2025-10-01',
-    posted_date: '2025-10-01',
-    cheque_no: '123456',
-    description: 'Payment for services',
-    cr_dr: 'Dr',
-    amount: 50000,
-    balance: 150000,
-    category: 'Reimbursement', // NEW
-    bank_details: {
-      bankName: 'HDFC Bank',
-      accountNo: '1234567890',
-      ifscCode: 'HDFC0001234',
-      relationshipManager: 'John Doe',
-      accountName: 'Kristellar Aerospace',
-      accountEmail: 'contact@kristellar.com',
-      accountMobile: '9876543210',
-      branchName: 'Main Branch'
-    },
-    period: '2025-10'
-  },
-  {
-    id: 2,
-    transaction_id: 'TXN002',
-    value_date: '2025-10-02',
-    posted_date: '2025-10-02',
-    cheque_no: '123457',
-    description: 'Team lunch',
-    cr_dr: 'Dr',
-    amount: 75000,
-    balance: 75000,
-    category: 'Food', // NEW
-    bank_details: {
-      bankName: 'SBI Bank',
-      accountNo: '0987654321',
-      ifscCode: 'SBIN0005678',
-      relationshipManager: 'Jane Smith',
-      accountName: 'Kristellar Aerospace',
-      accountEmail: 'accounts@kristellar.com',
-      accountMobile: '9123456789',
-      branchName: 'City Branch'
-    },
-    period: '2025-10'
-  }
-]);
+  const [transactions, setTransactions] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [notification, setNotification] = useState({ message: '', visible: false });
   const [isBankModalOpen, setIsBankModalOpen] = useState(false);
   const [isAddBankModalOpen, setIsAddBankModalOpen] = useState(false);
@@ -74,13 +29,19 @@ function BillExpenditure() {
     file: null,
   });
   const [editField, setEditField] = useState(null);
-  const [banks, setBanks] = useState(['HDFC Bank', 'SBI Bank']);
-  const [periods, setPeriods] = useState(['2025-10']);
-  const user = { role: 'Admin' };
+  const [banks, setBanks] = useState([]);
+  const [periods, setPeriods] = useState([]);
+  const [bankPeriods, setBankPeriods] = useState([]); // ← NEW
+  const [allPeriods, setAllPeriods] = useState([]);  
+  const user = JSON.parse(sessionStorage.getItem('user'));
   const fileInputRef = useRef(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [isViewBankModalOpen, setIsViewBankModalOpen] = useState(false);
   const [currentBankDetails, setCurrentBankDetails] = useState(null);
+  const [chartFilter, setChartFilter] = useState('all'); // 'all' or bank name
+  const [allCategories, setAllCategories] = useState([]); // ← Add this
+
+  const API_BASE = 'http://localhost:5000/api';
 
   const formatDateToIST = (utcDate) => {
     if (!utcDate) return '';
@@ -93,38 +54,109 @@ function BillExpenditure() {
     });
   };
 
-  const handleAddBankDetailsSubmit = async (e) => {
-    e.preventDefault();
-    setNotification({ message: 'Bank details added successfully!', visible: true });
-    setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
-    setIsAddBankModalOpen(false);
-    setBanks(prev => [...new Set([...prev, bankDetails.bankName])]);
-    setBankDetails({
-      bankName: '',
-      accountNo: '',
-      ifscCode: '',
-      relationshipManager: '',
-      accountName: '',
-      accountEmail: '',
-      accountMobile: '',
-      branchName: ''
-    });
+  // Show notification
+  const showNotification = (msg) => {
+    setNotification({ message: msg, visible: true });
+    setTimeout(() => setNotification({ message: '', visible: false }), 3000);
   };
 
-  const handleBankDetailsClick = (transactionId, existingBankDetails) => {
-    setSelectedTransactionId(transactionId);
-    setBankDetails(existingBankDetails || {
-      bankName: '',
-      accountNo: '',
-      ifscCode: '',
-      relationshipManager: '',
-      accountName: '',
-      accountEmail: '',
-      accountMobile: '',
-      branchName: ''
-    });
-    setEditField(null);
-    setIsBankModalOpen(true);
+  const fetchBanks = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/banks`);
+      const data = await res.json();
+      setBanks(data.map(b => b.bank_name));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchTransactions = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (selectedBank) params.append('bank', selectedBank);
+      if (selectedPeriod) params.append('period', selectedPeriod);
+      if (selectedCategory) params.append('category', selectedCategory);
+
+      const res = await fetch(`${API_BASE}/bill-expenditures/transactions?${params}`);
+      const data = await res.json();
+      setTransactions(data);
+
+      // === 1. Current filtered periods (for any UI use) ===
+      const currentPeriods = [...new Set(data.map(t => t.period).filter(Boolean))].sort().reverse();
+      setPeriods(currentPeriods);
+
+      // === 2. If a bank is selected → update bank-specific periods ===
+      if (selectedBank) {
+        setBankPeriods(currentPeriods);
+      }
+
+      // === 3. Global all-time periods (only for "All Transactions") ===
+      if (!selectedBank) {
+        const globalPeriodSet = new Set([
+          ...allPeriods,
+          ...data.map(t => t.period).filter(Boolean)
+        ]);
+        setAllPeriods([...globalPeriodSet].sort().reverse());
+      }
+
+      const uniqueCats = [...new Set(data.map(t => t.category).filter(Boolean))];
+      setCategories(uniqueCats);
+      // Preserve all-time categories
+      setAllCategories(prev => {
+        const combined = [...prev, ...uniqueCats];
+        return [...new Set(combined)].sort();
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+  if (!selectedBank) {
+    setBankPeriods([]);
+  }
+}, [selectedBank]);
+
+  useEffect(() => {
+    fetchBanks();
+    setAllPeriods([]);
+  }, []);
+
+  useEffect(() => {
+    fetchTransactions();
+  }, [selectedBank, selectedPeriod, selectedCategory]);
+
+  const handleAddBankDetailsSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await fetch(`${API_BASE}/banks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          bank_name: bankDetails.bankName,
+          account_no: bankDetails.accountNo,
+          ifsc_code: bankDetails.ifscCode,
+          relationship_manager: bankDetails.relationshipManager,
+          account_name: bankDetails.accountName,
+          account_email: bankDetails.accountEmail,
+          account_mobile: bankDetails.accountMobile,
+          branch_name: bankDetails.branchName,
+        })
+      });
+      if (res.ok) {
+        showNotification('Bank added successfully!');
+        setIsAddBankModalOpen(false);
+        fetchBanks();
+        setBankDetails({
+          bankName: '', accountNo: '', ifscCode: '', relationshipManager: '',
+          accountName: '', accountEmail: '', accountMobile: '', branchName: ''
+        });
+      }
+    } catch (err) {
+      showNotification('Failed to add bank');
+    }
   };
 
   const handleBankDetailsInputChange = (e) => {
@@ -166,77 +198,60 @@ function BillExpenditure() {
     if (file && (file.name.endsWith('.xls') || file.name.endsWith('.xlsx'))) {
       setStatementForm({ ...statementForm, file });
     } else {
-      setNotification({ message: 'Please upload a valid Excel file (.xls or .xlsx)', visible: true });
-      setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
+      showNotification('Please upload a valid Excel file (.xls or .xlsx)');
       e.target.value = null;
     }
   };
 
   const handleAddStatementSubmit = async (e) => {
-  e.preventDefault();
-  const { month, year, file, category } = statementForm;
-  if (!month || !year || !file ) {
-    setNotification({ message: 'All fields are required', visible: true });
-    setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
-    return;
-  }
+    e.preventDefault();
+    const { month, year, file } = statementForm;
+    if (!month || !year || !file || !selectedBank) {
+      showNotification('All fields and bank selection are required');
+      return;
+    }
 
-  const period = `${year}-${month.padStart(2, '0')}`;
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    const data = new Uint8Array(event.target.result);
-    const workbook = XLSX.read(data, { type: 'array' });
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+    const formData = new FormData();
+    formData.append('statement', file);
+    formData.append('bankName', selectedBank);
+    formData.append('month', month);
+    formData.append('year', year);
 
-    const newTransactions = jsonData.map((row, index) => ({
-      id: transactions.length + index + 1,
-      transaction_id: `TXN${String(transactions.length + index + 1).padStart(3, '0')}`,
-      value_date: new Date().toISOString(),
-      posted_date: new Date().toISOString(),
-      cheque_no: row.cheque_no || 'N/A',
-      description: row.description || 'Imported transaction',
-      cr_dr: row.cr_dr || 'Dr',
-      amount: row.amount || 0,
-      balance: row.balance || 0,
-      category: row.category || category, // Use Excel category or fallback to form
-      bank_details: {
-        bankName: selectedBank || 'Unknown Bank',
-        accountNo: bankDetails.accountNo || 'N/A',
-        ifscCode: bankDetails.ifscCode || 'N/A',
-        relationshipManager: bankDetails.relationshipManager || 'N/A',
-        accountName: bankDetails.accountName || 'N/A',
-        accountEmail: bankDetails.accountEmail || 'N/A',
-        accountMobile: bankDetails.accountMobile || 'N/A',
-        branchName: bankDetails.branchName || 'N/A'
-      },
-      period
-    }));
-
-    setTransactions(prev => [...prev, ...newTransactions]);
-    setPeriods(prev => [...new Set([...prev, period])].sort().reverse());
-    setNotification({ message: 'Statement added successfully!', visible: true });
-    setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
-    setIsAddStatementModalOpen(false);
-    setStatementForm({ month: '', year: '', file: null });
-    fileInputRef.current.value = null;
+    try {
+      const res = await fetch(`${API_BASE}/bill-expenditures/upload`, {
+        method: 'POST',
+        body: formData
+      });
+      const result = await res.json();
+      if (res.ok) {
+        showNotification(`Imported ${result.count} transactions!`);
+        setIsAddStatementModalOpen(false);
+        setStatementForm({ month: '', year: '', file: null });
+        fetchTransactions();
+      } else {
+        showNotification(result.error || 'Import failed');
+      }
+      // const newCats = [...new Set(data.map(t => t.category).filter(Boolean))];
+      // setCategories(prev => [...new Set([...prev, ...newCats])]);
+    } catch (err) {
+      showNotification('Upload failed');
+    }
   };
-  reader.readAsArrayBuffer(file);
-};
 
   const hasBankDetails = () => {
     return Object.values(bankDetails).some(value => value && value.trim() !== '');
   };
 
-  const handleViewBankDetails = (bankName) => {
-  // Find any transaction with this bank to get its details
-  const transaction = transactions.find(t => t.bank_details?.bankName === bankName);
-  if (transaction?.bank_details) {
-    setCurrentBankDetails(transaction.bank_details);
-    setIsViewBankModalOpen(true);
-  }
-};
+  const handleViewBankDetails = async (bankName) => {
+    try {
+      const res = await fetch(`${API_BASE}/banks/${encodeURIComponent(bankName)}`);
+      const data = await res.json();
+      setCurrentBankDetails(data);
+      setIsViewBankModalOpen(true);
+    } catch (err) {
+      showNotification('Failed to load bank details');
+    }
+  };
 
   const renderInputField = (label, field, type = 'text') => (
     <div style={{ marginBottom: '15px' }}>
@@ -317,6 +332,45 @@ function BillExpenditure() {
       </div>
     );
   };
+
+  const chartData = useMemo(() => {
+    const bankMonthMap = {};
+
+    transactions.forEach(t => {
+      const bank = t.bank_name || 'Unknown';
+      const period = t.period;
+      const amount = parseFloat(t.amount) || 0;
+
+      if (!bankMonthMap[bank]) bankMonthMap[bank] = {};
+      bankMonthMap[bank][period] = (bankMonthMap[bank][period] || 0) + amount;
+    });
+
+    const allMonths = [...new Set(transactions.map(t => t.period))].filter(Boolean).sort();
+    const allBanks = [...new Set(transactions.map(t => t.bank_name).filter(Boolean))].sort();
+
+    const quarters = allMonths.map(m =>
+      new Date(m + '-01').toLocaleString('en-IN', { month: 'long', year: 'numeric' })
+    );
+
+    const colors = [
+      '#0a9396', '#94d2bd', '#aecfeeff', '#ee9b00', '#ca6702', '#bb3e03', '#ae2012', '#9b2226'
+    ];
+
+    const datasets = allBanks.map((bank, idx) => {
+      const data = allMonths.map(month => bankMonthMap[bank][month] || 0);
+      const color = colors[idx % colors.length];
+
+      return {
+        label: bank,
+        data,
+        borderColor: color,
+        backgroundColor: color,
+        fill: false,
+      };
+    });
+
+    return { quarters, datasets, allBanks }; // ← expose allBanks
+  }, [transactions]);
 
   return (
     <div className="dashboard">
@@ -590,9 +644,14 @@ function BillExpenditure() {
                   style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px', fontSize: '14px' }}
                 >
                   <option value="">Select Month</option>
-                  {['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'].map(m => (
+                  {/* {['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'].map(m => (
                     <option key={m} value={m}>{new Date(0, m - 1).toLocaleString('en-IN', { month: 'long' })}</option>
-                  ))}
+                  ))} */}
+                  {[...Array(12)].map((_, i) => (
+                  <option key={i+1} value={String(i+1).padStart(2, '0')}>
+                    {new Date(0, i).toLocaleString('en', { month: 'long' })}
+                  </option>
+                ))}
                 </select>
               </div>
               <div style={{ marginBottom: '15px' }}>
@@ -750,16 +809,16 @@ function BillExpenditure() {
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)', width: '400px'
           }}>
             <h2 style={{ color: '#1e293b', marginBottom: '20px', textAlign: 'center' }}>
-              {currentBankDetails.bankName} - Bank Details
+              {currentBankDetails.bank_name} - Bank Details
             </h2>
             <div style={{ fontSize: '14px', lineHeight: '1.6' }}>
-              <p><strong>Account No:</strong> {currentBankDetails.accountNo}</p>
-              <p><strong>IFSC:</strong> {currentBankDetails.ifscCode}</p>
-              <p><strong>RM:</strong> {currentBankDetails.relationshipManager}</p>
-              <p><strong>Account Name:</strong> {currentBankDetails.accountName}</p>
-              <p><strong>Email:</strong> {currentBankDetails.accountEmail}</p>
-              <p><strong>Mobile:</strong> {currentBankDetails.accountMobile}</p>
-              <p><strong>Branch:</strong> {currentBankDetails.branchName}</p>
+              <p><strong>Account No:</strong> {currentBankDetails.account_no}</p>
+              <p><strong>IFSC:</strong> {currentBankDetails.ifsc_code}</p>
+              <p><strong>RM:</strong> {currentBankDetails.relationship_manager}</p>
+              <p><strong>Account Name:</strong> {currentBankDetails.account_name}</p>
+              <p><strong>Email:</strong> {currentBankDetails.account_email}</p>
+              <p><strong>Mobile:</strong> {currentBankDetails.account_mobile}</p>
+              <p><strong>Branch:</strong> {currentBankDetails.branch_name}</p>
             </div>
             <button onClick={() => setIsViewBankModalOpen(false)} style={{
               marginTop: '20px', width: '100%', backgroundColor: '#0a9396', color: 'white',
@@ -787,28 +846,29 @@ function BillExpenditure() {
         <div style={{ display: 'flex', gap: '10px' }}>
           {/* All Transactions & Bank Tabs */}
           <button
-            className={`tab-button ${activeTab === 'transactionhistory' && !selectedPeriod ? 'active' : ''}`}
+            className={`tab-button ${!selectedBank && !selectedPeriod ? 'active' : ''}`}
             onClick={() => {
               setActiveTab('transactionhistory');
               setSelectedBank(null);
               setSelectedPeriod(null);
               setSelectedCategory(null);
             }}
-            style={{ padding: '10px', border: 'none', backgroundColor: activeTab === 'transactionhistory' && !selectedPeriod ? '#0a9396' : '#e0e0e0', color: activeTab === 'transactionhistory' && !selectedPeriod ? 'white' : '#1e293b', cursor: 'pointer', borderRadius: '6px', fontWeight: '500' }}
+            style={{ padding: '10px', border: 'none', backgroundColor: !selectedBank && !selectedPeriod ? '#0a9396' : '#e0e0e0', color: !selectedBank && !selectedPeriod ? 'white' : '#1e293b', cursor: 'pointer', borderRadius: '6px', fontWeight: '500' }}
           >
             All Transactions
           </button>
           {banks.map((bank, index) => (
             <button
               key={index}
-              className={`tab-button ${selectedBank === bank && !selectedPeriod ? 'active' : ''}`}
+              // className={`tab-button ${selectedBank === bank && !selectedPeriod ? 'active' : ''}`}
+              className={`tab-button ${selectedBank === bank ? 'active' : ''}`}
               onClick={() => {
                 setActiveTab('bank');
                 setSelectedBank(bank);
                 setSelectedPeriod(null);
                 setSelectedCategory(null);
               }}
-              style={{ padding: '10px', border: 'none', backgroundColor: selectedBank === bank && !selectedPeriod ? '#0a9396' : '#e0e0e0', color: selectedBank === bank && !selectedPeriod ? 'white' : '#1e293b', cursor: 'pointer', borderRadius: '6px', fontWeight: '500' }}
+              style={{ padding: '10px', border: 'none', backgroundColor: selectedBank === bank ? '#0a9396' : '#e0e0e0', color: selectedBank === bank ? 'white' : '#1e293b', cursor: 'pointer', borderRadius: '6px', fontWeight: '500' }}
             >
               {bank}
             </button>
@@ -816,56 +876,78 @@ function BillExpenditure() {
         </div>
 
         {/* Category Dropdown */}
-        <div>
+        <div style={{ display: 'flex', gap: '10px'}}>
           <select
-            value={selectedCategory || ''}
+            value={selectedCategory}
             onChange={(e) => {
               const value = e.target.value;
-              setSelectedCategory(value || null);
-              if (!selectedBank && !selectedPeriod) setActiveTab('transactionhistory');
+              setSelectedCategory(value);
             }}
-            style={{ padding: '10px', border: '1px solid #ccc', borderRadius: '6px', backgroundColor: selectedCategory ? '#0a9396' : '#ffffff', color: selectedCategory ? 'white' : '#1e293b', fontWeight: '500', cursor: 'pointer', minWidth: '150px', fontSize: '14px' }}
+            style={{ padding: '10px', border: '1px solid #ccc', borderRadius: '6px', backgroundColor: '#ffffff', color: '#1e293b', fontWeight: '500', cursor: 'pointer', minWidth: '150px', fontSize: '14px' }}
           >
             <option value="">All Categories</option>
-            <option value="Reimbursement">Reimbursement</option>
-            <option value="Food">Food</option>
+            {allCategories.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
           </select>
+
+          <select 
+            value={selectedPeriod} 
+            onChange={(e) => { 
+              const val = e.target.value; 
+              setSelectedPeriod(val); 
+            }}
+              style={{ padding: '10px', border: '1px solid #ccc', borderRadius: '6px', backgroundColor: '#fff', color: '#1e293b', fontWeight: '500', cursor: 'pointer', minWidth: '180px', fontSize: '14px' }}>
+              <option value="">All Periods</option>
+              {selectedBank 
+                ? bankPeriods.map(p => (
+                    <option key={p} value={p}>
+                      {new Date(p + '-01').toLocaleString('en-IN', { month: 'long', year: 'numeric' })}
+                    </option>
+                  ))
+                : allPeriods.map(p => (
+                    <option key={p} value={p}>
+                      {new Date(p + '-01').toLocaleString('en-IN', { month: 'long', year: 'numeric' })}
+                    </option>
+                  ))
+              }
+            </select>
         </div>
       </div>
 
       {/* Action Row: Add Statement + Period + View Bank */}
-      {user && user.role === 'Admin' && activeTab === 'bank' && selectedBank && (
+      { user.role === 'Admin' && (
         <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', alignItems: 'center', justifyContent: 'space-between' }}>
+          {selectedBank &&(
           <div>
             <button className="action-button" onClick={() => handleViewBankDetails(selectedBank)}
               style={{ padding: '10px', border: 'none', backgroundColor: '#0a9396', color: 'white', cursor: 'pointer', borderRadius: '6px', fontWeight: '500' }}>
               View Bank Details
             </button>
           </div>
-          <div style={{display: 'flex', gap: '10px'}}>
-            <button className="action-button" onClick={() => setIsAddStatementModalOpen(true)}
-              style={{ padding: '10px', border: 'none', backgroundColor: '#0a9396', color: 'white', cursor: 'pointer', borderRadius: '6px', fontWeight: '500' }}>
-              Add Statement
-            </button>
-
-            <select value={selectedPeriod || ''} onChange={(e) => { const val = e.target.value; setActiveTab('period'); setSelectedPeriod(val || null); }}
-              style={{ padding: '10px', border: '1px solid #ccc', borderRadius: '6px', backgroundColor: selectedPeriod ? '#0a9396' : '#e0e0e0', color: selectedPeriod ? 'white' : '#1e293b', fontWeight: '500', cursor: 'pointer', minWidth: '180px' }}>
-              <option value="">All Periods</option>
-              {periods.filter(p => transactions.some(t => t.period === p && t.bank_details?.bankName === selectedBank))
-                .sort().reverse().map(p => (
-                  <option key={p} value={p}>{new Date(p).toLocaleString('en-IN', { month: 'long', year: 'numeric' })}</option>
-                ))}
-            </select>
+          )}
+          <div style={{display: 'flex', gap: '10px', justifyContent: 'flex-end', flex: 1}}>
+           {user.role === 'Admin' &&(
+              <button className="action-button" onClick={() => setIsAddStatementModalOpen(true)}
+                style={{ padding: '10px', border: 'none', backgroundColor: '#0a9396', color: 'white', cursor: 'pointer', borderRadius: '6px', fontWeight: '500' }}>
+                Add Statement
+              </button>
+            )}
           </div>
         </div>
       )}
-      <div>
-        <h2>KRISTELLAR AEROSPACE PRIVATE LIMITED</h2>
+      <h2 style={{marginBottom: '1px'}}>KRISTELLAR AEROSPACE PRIVATE LIMITED</h2>
+      <div style={{
+        height: '300px',           
+        overflow: 'auto',          
+        borderRadius: '8px',
+      }}>
         {transactions.length > 0 ? (
           <table className="invoice-table">
             <thead>
               <tr>
                 <th>No.</th>
+                <th>Bank</th>
                 <th>Transaction ID</th>
                 <th>Value Date</th>
                 <th>Txn Posted Date</th>
@@ -878,14 +960,15 @@ function BillExpenditure() {
             </thead>
             <tbody>
               {transactions
-                .filter(transaction => 
-                  (!selectedBank || transaction.bank_details?.bankName === selectedBank) &&
-                  (!selectedPeriod || transaction.period === selectedPeriod) &&
-                  (!selectedCategory || transaction.description.includes(selectedCategory))
-                )
+                // .filter(transaction => 
+                //   (!selectedBank || transaction.bank_details?.bankName === selectedBank) &&
+                //   (!selectedPeriod || transaction.period === selectedPeriod) &&
+                //   (!selectedCategory || transaction.description.includes(selectedCategory))
+                // )
                 .map((transaction, index) => (
                   <tr key={transaction.id}>
                     <td>{index + 1}</td>
+                    <td>{transaction.bank_name}</td>
                     <td>{transaction.transaction_id}</td>
                     <td>{formatDateToIST(transaction.value_date)}</td>
                     <td>{formatDateToIST(transaction.posted_date)}</td>
@@ -902,6 +985,85 @@ function BillExpenditure() {
           <p>No transactions available.</p>
         )}
       </div>
+
+      <div style={{ marginTop: '40px', padding: '20px', background: '#f9fafb', borderRadius: '8px' }}>
+        <h2 style={{ marginBottom: '10px' }}>Monthly Expenditure by Bank</h2>
+
+        {/* FILTER BUTTONS – UNDER THE HEADING */}
+        {/* <div style={{ marginBottom: '15px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setChartFilter('all')}
+            style={{
+              padding: '6px 12px',
+              border: 'none',
+              borderRadius: '4px',
+              backgroundColor: chartFilter === 'all' ? '#0a9396' : '#e0e0e0',
+              color: chartFilter === 'all' ? 'white' : '#1e293b',
+              cursor: 'pointer',
+              fontWeight: '500',
+              fontSize: '13px'
+            }}
+          >
+            All Banks
+          </button>
+          {chartData.allBanks.map(bank => (
+            <button
+              key={bank}
+              onClick={() => setChartFilter(bank)}
+              style={{
+                padding: '6px 12px',
+                border: 'none',
+                borderRadius: '4px',
+                backgroundColor: chartFilter === bank ? '#0a9396' : '#e0e0e0',
+                color: chartFilter === bank ? 'white' : '#1e293b',
+                cursor: 'pointer',
+                fontWeight: '500',
+                fontSize: '13px'
+              }}
+            >
+              {bank}
+            </button>
+          ))}
+        </div> */}
+
+        {/* THE CHART */}
+        <div style={{ height: '250px', position: 'relative' }}>
+          <Line
+            data={{
+              labels: chartData.quarters,
+              datasets: chartData.datasets
+                .map(ds => ({
+                  ...ds,
+                  hidden: chartFilter !== 'all' && chartFilter !== ds.label
+                }))
+            }}
+            options={{
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { position: 'top' },
+                tooltip: {
+                  callbacks: {
+                    label: context => {
+                      const value = context.parsed.y;
+                      return `${context.dataset.label}: ₹${value.toLocaleString('en-IN')}`;
+                    }
+                  }
+                }
+              },
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  ticks: {
+                    callback: value => '₹' + value.toLocaleString('en-IN')
+                  }
+                }
+              }
+            }}
+          />
+        </div>
+      </div>
+
     </div>
   );
 }

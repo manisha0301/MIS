@@ -284,6 +284,8 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
   animation: fadeIn 0.5s ease-in;
   border: 1px solid #94d2bd;
+  overflow-y: auto;
+  height: 300px;
 }
 
 .kpi-card h3 {
