@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import '../styles/dashboard.css';
+import API_BASE_URL from '../api/apiConfig';
 
 const Admin = () => {
   const [activeTab, setActiveTab] = useState('view');
@@ -15,13 +16,13 @@ const Admin = () => {
     try {
       const token = sessionStorage.getItem("token");
 
-const response = await fetch('http://localhost:5000/api/admin/users', {
-  method: 'GET',
-  headers: { 
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
-  },
-});
+      const response = await fetch(`${API_BASE_URL}/api/admin/users`, {
+        method: 'GET',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+      });
 
       if (!response.ok) {
         throw new Error('Failed to fetch users');
@@ -48,7 +49,7 @@ const response = await fetch('http://localhost:5000/api/admin/users', {
     try {
       const token = sessionStorage.getItem("token");
 
-const response = await fetch('http://localhost:5000/api/admin/users', {
+const response = await fetch(`${API_BASE_URL}/api/admin/users`, {
   method: 'POST',
   headers: { 
     'Content-Type': 'application/json',
@@ -79,7 +80,7 @@ const response = await fetch('http://localhost:5000/api/admin/users', {
     try {
       const token = sessionStorage.getItem("token");
 
-    const response = await fetch('http://localhost:5000/api/admin/users', {
+    const response = await fetch(`${API_BASE_URL}/api/admin/users`, {
       method: 'DELETE',
       headers: { 
         'Content-Type': 'application/json',

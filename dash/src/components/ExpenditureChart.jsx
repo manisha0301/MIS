@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import API_BASE_URL from '../api/apiConfig';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -20,7 +21,7 @@ function ExpenditureChart() {
   useEffect(() => {
     const fetchExpenditureData = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/expenditures?quarter=All Quarters');
+        const response = await fetch(`${API_BASE_URL}/api/expenditures?quarter=All Quarters`);
         if (!response.ok) {
           throw new Error('Failed to fetch expenditure data');
         }

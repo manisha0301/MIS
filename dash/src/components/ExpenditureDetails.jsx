@@ -2,6 +2,7 @@ import { use } from 'react';
 import { useState, useEffect, useRef } from 'react';
 import { FaMoneyBillWave, FaEdit, FaTrash } from 'react-icons/fa';
 import * as XLSX from 'xlsx';
+import API_BASE_URL from '../api/apiConfig';
 
 function ExpenditureDetails() {
   const [expenditureData, setExpenditureData] = useState({ details: [] });
@@ -19,7 +20,7 @@ function ExpenditureDetails() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`http://localhost:5000/api/expenditures?quarter=${quarter}`);
+      const response = await fetch(`${API_BASE_URL}/api/expenditures?quarter=${quarter}`);
       if (!response.ok) throw new Error('Failed to fetch expenditures');
       const data = await response.json();
       setExpenditureData(data);
@@ -83,7 +84,7 @@ function ExpenditureDetails() {
           const newDetails = Array.from(categoryMap.values());
 
           // Send to backend
-          const response = await fetch('http://localhost:5000/api/expenditures/import', {
+          const response = await fetch(`${API_BASE_URL}/api/expenditures/import`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(newDetails)
@@ -102,7 +103,7 @@ function ExpenditureDetails() {
   // Handle Excel export
   const exportAllToExcel = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/expenditures/export?quarter=${selectedQuarter}`);
+      const response = await fetch(`${API_BASE_URL}/api/expenditures/export?quarter=${selectedQuarter}`);
       if (!response.ok) throw new Error('Failed to export expenditures');
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -123,7 +124,7 @@ function ExpenditureDetails() {
     e.preventDefault();
     if (editItem && editedItem.name && !isNaN(editedItem.amount)) {
       try {
-        const response = await fetch('http://localhost:5000/api/expenditures', {
+        const response = await fetch(`${API_BASE_URL}/api/expenditures`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -145,7 +146,7 @@ function ExpenditureDetails() {
   const handleDelete = async (category) => {
     if (window.confirm(`Are you sure you want to delete the ${category.category} category?`)) {
       try {
-        const response = await fetch(`http://localhost:5000/api/expenditures/${encodeURIComponent(category.category)}`, {
+        const response = await fetch(`${API_BASE_URL}/api/expenditures/${encodeURIComponent(category.category)}`, {
           method: 'DELETE'
         });
         if (!response.ok) throw new Error('Failed to delete category');

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import API_BASE_URL from '../api/apiConfig';
 
 function ProductGrid() {
   const [products, setProducts] = useState([]);
@@ -9,7 +10,7 @@ function ProductGrid() {
   const user = JSON.parse(sessionStorage.getItem("user"));
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/products')
+    fetch(`${API_BASE_URL}/api/products`)
       .then(res => res.json())
       .then(data => setProducts(data))
       .catch(err => console.error('Error fetching products:', err));
@@ -43,7 +44,7 @@ function ProductGrid() {
       formData.append('description', newProduct.description);
       formData.append('image', newProduct.image);
 
-      const response = await fetch('http://localhost:5000/api/products', {
+      const response = await fetch(`${API_BASE_URL}/api/products`, {
         method: 'POST',
         body: formData,
       });
@@ -259,7 +260,7 @@ function ProductGrid() {
             }}
           >
             <div style={{ border: '1px solid #e0e0e0', borderRadius: '8px', padding: '5px', marginBottom: '10px', position: 'relative', paddingTop: '56.25%' }}>
-              <img src={`http://localhost:5000${product.image}`} alt={product.name} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', borderRadius: '6px' }} />
+              <img src={`${API_BASE_URL}${product.image}`} alt={product.name} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', borderRadius: '6px' }} />
             </div>
             <h3 style={{ color: '#1e293b', fontSize: '18px', margin: '10px 0', fontFamily: '-apple-system, BlinkMacSystemFont, sans-serif' }}>{product.name}</h3>
             <div style={{ backgroundColor: '#f0f4f8', padding: '10px', borderRadius: '6px', margin: '10px 0' }}>

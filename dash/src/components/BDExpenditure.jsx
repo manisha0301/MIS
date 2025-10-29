@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import API_BASE_URL from '../api/apiConfig';
 
 function BDExpenditure() {
   const { id } = useParams();
@@ -20,7 +21,7 @@ function BDExpenditure() {
   // Load BD expenditures for this project
   const fetchExpenditures = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/projects/${projectId}/bdexp`);
+      const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}/bdexp`);
       const data = await res.json();
       if (res.ok) {
         setExpenditures(data);
@@ -80,7 +81,7 @@ function BDExpenditure() {
     });
 
     try {
-      const res = await fetch(`http://localhost:5000/api/projects/${projectId}/bdexp`, {
+      const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}/bdexp`, {
         method: 'POST',
         body: form
       });
@@ -117,7 +118,7 @@ function BDExpenditure() {
       showNotification('No receipt available', 'error');
       return;
     }
-    const url = `http://localhost:5000${receiptPath}`;
+    const url = `${API_BASE_URL}${receiptPath}`;
     window.open(url, '_blank');
   };
 

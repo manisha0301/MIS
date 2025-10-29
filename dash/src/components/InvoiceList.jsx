@@ -1,177 +1,10 @@
 import { useEffect, useState } from 'react';
 import { FaEye } from "react-icons/fa";
+import API_BASE_URL from '../api/apiConfig';
 
 function InvoiceList() {
-  // const [clients, setClients] = useState([
-  //   {
-  //     "id": 1,
-  //     "clientId": "CLI001",
-  //     "name": "Acme Corporation",
-  //     "address": "123 Business Park, MG Road",
-  //     "state": "Maharashtra",
-  //     "contact": "+91 98765 43210",
-  //     "email": "contact@acme.com",
-  //     "gstNumber": "27AAAAA0000A1Z5",
-  //     "panNumber": "AAAAA0000A",
-  //     "purchaseOrderId": "PO001",
-  //     "totalPurchases": 1500000.50,
-  //     "contractProofUrl": "http://localhost:5000/files/contract1.pdf",
-  //     "purchaseOrderUrl": "http://localhost:5000/files/po1.pdf"
-  //   },
-  //   {
-  //     "id": 2,
-  //     "clientId": "CLI002",
-  //     "name": "Global Traders",
-  //     "address": "456 Industrial Area, Phase 2",
-  //     "state": "Gujarat",
-  //     "contact": "+91 87654 32109",
-  //     "email": "sales@globaltraders.in",
-  //     "gstNumber": "24BBBBBB0000B1Z7",
-  //     "panNumber": "BBBBBB0000B",
-  //     "purchaseOrderId": "PO002",
-  //     "totalPurchases": 850000.75,
-  //     "contractProofUrl": "http://localhost:5000/files/contract2.pdf",
-  //     "purchaseOrderUrl": null
-  //   },
-  //   {
-  //     "id": 3,
-  //     "clientId": "CLI003",
-  //     "name": "Tech Solutions Pvt Ltd",
-  //     "address": "789 Tech City, Electronic Street",
-  //     "state": "Karnataka",
-  //     "contact": "+91 76543 21098",
-  //     "email": "info@techsolutions.co.in",
-  //     "gstNumber": "29CCCCCC0000C1Z3",
-  //     "panNumber": "CCCCCC0000C",
-  //     "purchaseOrderId": "PO003",
-  //     "totalPurchases": 2300000.00,
-  //     "contractProofUrl": null,
-  //     "purchaseOrderUrl": "http://localhost:5000/files/po3.pdf"
-  //   },
-  //   {
-  //     "id": 4,
-  //     "clientId": "CLI004",
-  //     "name": "Sunrise Enterprises",
-  //     "address": "101 Commerce Hub, Central Avenue",
-  //     "state": "Tamil Nadu",
-  //     "contact": "+91 65432 10987",
-  //     "email": "support@sunriseenterprises.com",
-  //     "gstNumber": "33DDDDDD0000D1Z9",
-  //     "panNumber": "DDDDDD0000D",
-  //     "purchaseOrderId": "PO004",
-  //     "totalPurchases": 450000.25,
-  //     "contractProofUrl": "http://localhost:5000/files/contract4.pdf",
-  //     "purchaseOrderUrl": "http://localhost:5000/files/po4.pdf"
-  //   },
-  //   {
-  //     "id": 5,
-  //     "clientId": "CLI005",
-  //     "name": "Pioneer Industries",
-  //     "address": "202 Industrial Estate, Ring Road",
-  //     "state": "Rajasthan",
-  //     "contact": "+91 54321 09876",
-  //     "email": "contact@pioneerindustries.in",
-  //     "gstNumber": "08EEEEEE0000E1Z1",
-  //     "panNumber": "EEEEEE0000E",
-  //     "purchaseOrderId": "PO005",
-  //     "totalPurchases": 1200000.00,
-  //     "contractProofUrl": null,
-  //     "purchaseOrderUrl": null
-  //   }
-  // ]);
   const [activeTab, setActiveTab] = useState('sales');
   const [modalTab, setModalTab] = useState('sales');
-  // const [salesInvoices, setSalesInvoices] = useState([
-  //   {
-  //     id: 1,
-  //     number: "INV001",
-  //     date: "2025-01-15",
-  //     customer: "Acme Corporation",
-  //     amount: 500000,
-  //     due_date: "2025-02-15",
-  //     payment_method: "Bank Transfer",
-  //     notes: "Software development services",
-  //     status: "Due",
-  //     pdf_url: "http://localhost:5000/files/invoice1.pdf",
-  //     clientId: "CLI001",
-  //     gstPercentage: "18"
-  //   },
-  //   {
-  //     id: 2,
-  //     number: "INV002",
-  //     date: "2025-02-01",
-  //     customer: "Global Traders",
-  //     amount: 750000,
-  //     due_date: "2025-03-01",
-  //     payment_method: "UPI",
-  //     notes: "Hardware supply",
-  //     status: "Paid",
-  //     pdf_url: null,
-  //     clientId: "CLI002",
-  //     gstPercentage: "12"
-  //   },
-  //   {
-  //     id: 3,
-  //     number: "INV003",
-  //     date: "2025-03-10",
-  //     customer: "Tech Solutions Pvt Ltd",
-  //     amount: 1200000,
-  //     due_date: "2025-04-10",
-  //     payment_method: "Credit Card",
-  //     notes: "Cloud services subscription",
-  //     status: "Due",
-  //     pdf_url: "http://localhost:5000/files/invoice3.pdf",
-  //     clientId: "CLI003",
-  //     gstPercentage: "18"
-  //   }
-  // ]);
-  // const [purchaseInvoices, setPurchaseInvoices] = useState([
-  //   {
-  //     id: 1,
-  //     number: "PINV001",
-  //     date: "2025-01-20",
-  //     supplier: "Sunrise Enterprises",
-  //     amount: 300000,
-  //     due_date: "2025-02-20",
-  //     payment_method: "Bank Transfer",
-  //     notes: "Raw material supply",
-  //     status: "Due",
-  //     pdf_url: "http://localhost:5000/files/pinvoice1.pdf",
-  //     clientId: "CLI004",
-  //     gstPercentage: "18",
-  //     tdsPercentage: "2"
-  //   },
-  //   {
-  //     id: 2,
-  //     number: "PINV002",
-  //     date: "2025-02-15",
-  //     supplier: "Pioneer Industries",
-  //     amount: 450000,
-  //     due_date: "2025-03-15",
-  //     payment_method: "Cash",
-  //     notes: "Equipment purchase",
-  //     status: "Paid",
-  //     pdf_url: null,
-  //     clientId: "CLI005",
-  //     gstPercentage: "12",
-  //     tdsPercentage: "1"
-  //   },
-  //   {
-  //     id: 3,
-  //     number: "PINV003",
-  //     date: "2025-03-05",
-  //     supplier: "Global Traders",
-  //     amount: 600000,
-  //     due_date: "2025-04-05",
-  //     payment_method: "UPI",
-  //     notes: "Consulting services",
-  //     status: "Due",
-  //     pdf_url: "http://localhost:5000/files/pinvoice3.pdf",
-  //     clientId: "CLI002",
-  //     gstPercentage: "18",
-  //     tdsPercentage: "2"
-  //   }
-  // ]);
   const [salesInvoices, setSalesInvoices] = useState([]);
   const [purchaseInvoices, setPurchaseInvoices] = useState([]);
   const [clients, setClients] = useState([]);
@@ -199,35 +32,6 @@ function InvoiceList() {
   const [notification, setNotification] = useState({ message: '', visible: false });
   const user = JSON.parse(sessionStorage.getItem("user"));
 
-  // // Fetch invoices on component mount
-  // useEffect(() => {
-  //   const fetchInvoices = async () => {
-  //     try {
-  //       const token = localStorage.getItem('token');
-  //       const salesResponse = await fetch('http://localhost:5000/api/invoices/sales', {
-  //         headers: { 'Authorization': `Bearer ${token}` },
-  //       });
-  //       const purchaseResponse = await fetch('http://localhost:5000/api/invoices/purchase', {
-  //         headers: { 'Authorization': `Bearer ${token}` },
-  //       });
-
-  //       if (!salesResponse.ok || !purchaseResponse.ok) {
-  //         throw new Error('Failed to fetch invoices');
-  //       }
-
-  //       const salesData = await salesResponse.json();
-  //       const purchaseData = await purchaseResponse.json();
-  //       setSalesInvoices(salesData);
-  //       setPurchaseInvoices(purchaseData);
-  //     } catch (error) {
-  //       setNotification({ message: 'Error fetching invoices', visible: true });
-  //       setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
-  //     }
-  //   };
-  //   fetchInvoices();
-  // }, []);
-
-  // Fetch invoices and clients
   useEffect(() => {
     fetchInvoices();
     fetchClients();
@@ -235,18 +39,9 @@ function InvoiceList() {
 
   const fetchInvoices = async () => {
     try {
-      const token = localStorage.getItem('token');
       const [salesRes, purchaseRes] = await Promise.all([
-        fetch('http://localhost:5000/api/invoices/sales', 
-        //   {
-        //   headers: { 'Authorization': `Bearer ${token}` }
-        // }
-      ),
-        fetch('http://localhost:5000/api/invoices/purchase', 
-        //   {
-        //   headers: { 'Authorization': `Bearer ${token}` }
-        // }
-      )
+        fetch(`${API_BASE_URL}/api/invoices/sales`),
+        fetch(`${API_BASE_URL}/api/invoices/purchase`)
       ]);
 
       if (!salesRes.ok || !purchaseRes.ok) throw new Error('Failed to fetch invoices');
@@ -263,12 +58,7 @@ function InvoiceList() {
 
   const fetchClients = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch('http://localhost:5000/api/customers', 
-      //   {
-      //   headers: { 'Authorization': `Bearer ${token}` }
-      // }
-      );
+      const res = await fetch(`${API_BASE_URL}/api/customers`);
       if (res.ok) {
         const data = await res.json();
         setClients(data);
@@ -294,56 +84,16 @@ function InvoiceList() {
     });
   };
 
-  // const handleStatusToggle = async (id, tab) => {
-  //   const newStatus = tab === 'sales'
-  //     ? salesInvoices.find(inv => inv.id === id).status === 'Paid' ? 'Due' : 'Paid'
-  //     : purchaseInvoices.find(inv => inv.id === id).status === 'Paid' ? 'Due' : 'Paid';
-
-  //   try {
-  //     const token = localStorage.getItem('token');
-  //     const response = await fetch(`http://localhost:5000/api/invoices/${id}/status`, {
-  //       method: 'PUT',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //         'Authorization': `Bearer ${token}`,
-  //       },
-  //       body: JSON.stringify({ status: newStatus }),
-  //     });
-
-  //     if (!response.ok) {
-  //       throw new Error('Failed to update status');
-  //     }
-
-  //     const updatedInvoice = await response.json();
-  //     if (tab === 'sales') {
-  //       setSalesInvoices(prev => prev.map(inv => 
-  //         inv.id === id ? { ...inv, status: newStatus } : inv
-  //       ));
-  //     } else {
-  //       setPurchaseInvoices(prev => prev.map(inv => 
-  //         inv.id === id ? { ...inv, status: newStatus } : inv
-  //       ));
-  //     }
-  //     setNotification({ message: 'Status updated successfully!', visible: true });
-  //     setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
-  //   } catch (error) {
-  //     setNotification({ message: 'Error updating status', visible: true });
-  //     setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
-  //   }
-  // };
-
   const handleStatusToggle = async (id, type) => {
     const invoiceList = type === 'sales' ? salesInvoices : purchaseInvoices;
     const invoice = invoiceList.find(inv => inv.id === id);
     const newStatus = invoice.status === 'Paid' ? 'Due' : 'Paid';
 
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`http://localhost:5000/api/invoices/${type}/${id}/status`, {
+      const res = await fetch(`${API_BASE_URL}/api/invoices/${type}/${id}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
-          // 'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({ status: newStatus })
       });
@@ -365,47 +115,8 @@ function InvoiceList() {
     }
   };
 
-  const handlePdfUpload = async (e, id, tab) => {
-    const file = e.target.files[0];
-    if (file && file.type === 'application/pdf') {
-      const formData = new FormData();
-      formData.append('pdf', file);
-      try {
-        const token = localStorage.getItem('token');
-        const response = await fetch(`http://localhost:5000/api/invoices/${id}/pdf`, {
-          method: 'PUT',
-          headers: { 'Authorization': `Bearer ${token}` },
-          body: formData,
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to upload PDF');
-        }
-
-        const updatedInvoice = await response.json();
-        if (tab === 'sales') {
-          setSalesInvoices(prev => prev.map(inv => 
-            inv.id === id ? { ...inv, pdf_url: updatedInvoice.pdf_url } : inv
-          ));
-        } else {
-          setPurchaseInvoices(prev => prev.map(inv => 
-            inv.id === id ? { ...inv, pdf_url: updatedInvoice.pdf_url } : inv
-          ));
-        }
-        setNotification({ message: 'PDF uploaded successfully!', visible: true });
-        setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
-      } catch (error) {
-        setNotification({ message: 'Error uploading PDF', visible: true });
-        setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
-      }
-    } else {
-      setNotification({ message: 'Please upload a PDF file.', visible: true });
-      setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
-    }
-  };
-
   const openPdf = (pdfUrl) => {
-    window.open(`http://localhost:5000${pdfUrl}`, '_blank');
+    window.open(`${API_BASE_URL}${pdfUrl}`, '_blank');
   };
 
   const handleInputChange = (e) => {
@@ -433,64 +144,6 @@ function InvoiceList() {
     }
   };
 
-  // const handleSubmit = async (e) => {
-  //   e.preventDefault();
-  //   const requiredFields = modalTab === 'sales' 
-  //     ? ['number', 'date', 'clientId', 'amount', 'dueDate', 'paymentMethod', 'gstPercentage']
-  //     : ['number', 'date', 'clientId', 'amount', 'dueDate', 'paymentMethod', 'gstPercentage', 'tdsPercentage'];
-    
-  //   if (requiredFields.some(field => !newInvoice[field])) {
-  //     setNotification({ message: 'Please fill all required fields.', visible: true });
-  //     setTimeout(() => setNotification({ ...notification, visible: false }), 3000);
-  //     return;
-  //   }
-
-  //   const formData = new FormData();
-  //   formData.append('type', modalTab);
-  //   formData.append('number', newInvoice.number);
-  //   formData.append('date', newInvoice.date);
-  //   formData.append('company', newInvoice.company || '');
-  //   formData.append('customer', modalTab === 'sales' ? newInvoice.customer || '' : '');
-  //   formData.append('supplier', modalTab === 'purchase' ? newInvoice.supplier || '' : '');
-  //   formData.append('amount', newInvoice.amount);
-  //   formData.append('gstPercentage', newInvoice.gstPercentage);
-  //   formData.append('dueDate', newInvoice.dueDate);
-  //   formData.append('paymentMethod', newInvoice.paymentMethod);
-  //   formData.append('notes', newInvoice.notes || '');
-  //   formData.append('status', newInvoice.status);
-  //   formData.append('clientId', newInvoice.clientId);
-
-  //   if (modalTab === 'purchase') {
-  //     formData.append('tdsPercentage', newInvoice.tdsPercentage || '');
-  //   }
-
-  //   if (newInvoice.pdf) {
-  //     formData.append('pdf', newInvoice.pdf);
-  //   }
-
-  //   try {
-  //     const res = await fetch('http://localhost:5000/api/invoices', {
-  //       method: 'POST',
-  //       body: formData
-  //     });
-
-  //     if (!res.ok) throw new Error('Failed to add invoice');
-
-  //     const addedInvoice = await res.json();
-  //     if (modalTab === 'sales') {
-  //       setSalesInvoices(prev => [addedInvoice, ...prev]);
-  //     } else {
-  //       setPurchaseInvoices(prev => [addedInvoice, ...prev]);
-  //     }
-
-  //     setIsFormOpen(false);
-  //     resetForm();
-  //     showNotification('Invoice added successfully!');
-  //   } catch (error) {
-  //     showNotification('Error adding invoice');
-  //   }
-  // };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData();
@@ -517,7 +170,7 @@ function InvoiceList() {
     }
 
     try {
-      const res = await fetch('http://localhost:5000/api/invoices', {
+      const res = await fetch(`${API_BASE_URL}/api/invoices`, {
         method: 'POST',
         body: formData
       });
@@ -585,10 +238,6 @@ function InvoiceList() {
     const n = Number(num) || 0;
     return n.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
-
-  // console.log('salesInvoices:', salesInvoices);
-  // console.log('purchaseInvoices:', purchaseInvoices);
-  // console.log('clients:', clients);
 
   return (
     <div className="dashboard">

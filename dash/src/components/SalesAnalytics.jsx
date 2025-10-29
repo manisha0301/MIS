@@ -11,6 +11,7 @@ import {
   Legend,
   ArcElement 
 } from 'chart.js';
+import API_BASE_URL from '../api/apiConfig';
 
 ChartJS.register(
   CategoryScale, 
@@ -37,7 +38,7 @@ function SalesChart({ filter, quarter }) {
   useEffect(() => {
     const fetchSalesData = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/sales');
+        const response = await fetch(`${API_BASE_URL}/api/sales`);
         if (!response.ok) {
           throw new Error('Failed to fetch sales data');
         }
@@ -218,7 +219,7 @@ function SalesAnalytics() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:5000/api/sales');
+        const response = await fetch(`${API_BASE_URL}/api/sales`);
         if (!response.ok) {
           throw new Error('Failed to fetch sales data');
         }
@@ -229,7 +230,7 @@ function SalesAnalytics() {
         if (data.salesData.quarters.length > 0) {
           setSelectedQuarter(data.salesData.quarters[data.salesData.quarters.length - 1]);
         }
-        const customersResponse = await fetch('http://localhost:5000/api/customers');
+        const customersResponse = await fetch(`${API_BASE_URL}/api/customers`);
         if (!customersResponse.ok) {
           throw new Error('Failed to fetch customer data');
         }
@@ -357,7 +358,7 @@ function SalesAnalytics() {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/api/sales', {
+      const response = await fetch(`${API_BASE_URL}/api/sales`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -382,7 +383,7 @@ function SalesAnalytics() {
       const newData = await response.json();
       // Update local state with new data
       const fetchData = async () => {
-        const res = await fetch('http://localhost:5000/api/sales');
+        const res = await fetch(`${API_BASE_URL}/api/sales`);
         if (res.ok) {
           const data = await res.json();
           setSalesData(data.salesData);

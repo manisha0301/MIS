@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import API_BASE_URL from '../api/apiConfig';
 
 function Projects() {
   const navigate = useNavigate();
@@ -9,7 +10,7 @@ function Projects() {
   useEffect(() => {
   const fetchProjects = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/projects');
+      const response = await fetch(`${API_BASE_URL}/api/projects`);
       const data = await response.json();
       // console.log("data:", data)
       setProjects(data);
@@ -123,7 +124,7 @@ function Projects() {
               }}>
                 <img
                   // src={project.image}
-                  src={`http://localhost:5000${project.image}`}
+                  src={`${API_BASE_URL}${project.image}`}
                   alt={project.name}
                   style={{
                     position: 'absolute',

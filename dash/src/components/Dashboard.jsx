@@ -5,6 +5,7 @@ import ForecastCard from '/src/components/ForecastCard.jsx';
 import { FaBell, FaSignOutAlt } from 'react-icons/fa';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import API_BASE_URL from '../api/apiConfig.js';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -88,7 +89,7 @@ function Dashboard() {
     const fetchSalesData = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:5000/api/sales');
+        const response = await fetch(`${API_BASE_URL}/api/sales`);
         if (!response.ok) {
           throw new Error('Failed to fetch sales data');
         }
@@ -102,7 +103,7 @@ function Dashboard() {
 
     const fetchCustomerData = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/customers');
+        const response = await fetch(`${API_BASE_URL}/api/customers`);
         if (!response.ok) {
           throw new Error('Failed to fetch customer data');
         }
@@ -137,7 +138,7 @@ function Dashboard() {
 
     const fetchTopProduct = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/products');
+        const response = await fetch(`${API_BASE_URL}/api/products`);
         if (!response.ok) {
           throw new Error('Failed to fetch products');
         }

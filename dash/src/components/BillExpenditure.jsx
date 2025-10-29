@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { Line } from 'react-chartjs-2';
+import API_BASE_URL from '../api/apiConfig';
 
 function BillExpenditure() {
   const [activeTab, setActiveTab] = useState('transactionhistory');
@@ -41,7 +42,7 @@ function BillExpenditure() {
   const [chartFilter, setChartFilter] = useState('all'); // 'all' or bank name
   const [allCategories, setAllCategories] = useState([]); // ← Add this
 
-  const API_BASE = 'http://localhost:5000/api';
+  const API_BASE = `${API_BASE_URL}/api`;
 
   const formatDateToIST = (utcDate) => {
     if (!utcDate) return '';

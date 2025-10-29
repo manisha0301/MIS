@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import API_BASE_URL from '../api/apiConfig';
 
 function CustomerList() {
   const [customers, setCustomers] = useState([]);
@@ -23,7 +24,7 @@ function CustomerList() {
 
   useEffect(() => {
     // Fetch customers from backend
-    fetch('http://localhost:5000/api/customers')
+    fetch(`${API_BASE_URL}/api/customers`)
       .then(res => res.json())
       .then(data => setCustomers(data))
       .catch(err => console.error('Error fetching customers:', err));
@@ -75,7 +76,7 @@ function CustomerList() {
         formDataToSend.append('purchaseOrder', formData.purchaseOrder);
       }
 
-      const response = await fetch('http://localhost:5000/api/customers', {
+      const response = await fetch(`${API_BASE_URL}/api/customers`, {
         method: 'POST',
         body: formDataToSend,
       });
@@ -197,7 +198,7 @@ function CustomerList() {
                     {client.contract_proof_url ? (
                       <button 
                         className="action-button"
-                        onClick={() => handleViewPdf(`http://localhost:5000${client.contract_proof_url}`)}
+                        onClick={() => handleViewPdf(`${API_BASE_URL}${client.contract_proof_url}`)}
                       >
                         View Contract
                       </button>
@@ -208,7 +209,7 @@ function CustomerList() {
                     {client.purchase_order_url ? (
                       <button 
                         className="action-button"
-                        onClick={() => handleViewPdf(`http://localhost:5000${client.purchase_order_url}`)}
+                        onClick={() => handleViewPdf(`${API_BASE_URL}${client.purchase_order_url}`)}
                       >
                         View PO
                       </button>

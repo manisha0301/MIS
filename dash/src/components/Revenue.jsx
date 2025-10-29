@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import API_BASE_URL from '../api/apiConfig';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -13,11 +14,11 @@ function Revenue() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const salesRes = await fetch('http://localhost:5000/api/invoices/sales');
+        const salesRes = await fetch(`${API_BASE_URL}/api/invoices/sales`);
         const sales = await salesRes.json();
         setSalesInvoices(sales);
 
-        const projectsRes = await fetch('http://localhost:5000/api/projects');
+        const projectsRes = await fetch(`${API_BASE_URL}/api/projects`);
         const projects = await projectsRes.json();
         setProjectData(projects);
 

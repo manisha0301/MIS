@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import API_BASE_URL from '../api/apiConfig';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -40,7 +41,7 @@ function ProjectDetails() {
   // extract fetchProject so we can refresh after saving modal changes
   const fetchProject = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/projects/${id}`);
+      const response = await fetch(`${API_BASE_URL}/api/projects/${id}`);
       const project = await response.json();
       if (response.ok) {
         setFormData({
@@ -139,7 +140,7 @@ function ProjectDetails() {
     // non-editing fallback: immediate backend create
     try {
       const newCapx = { projectId: id, item: '', amount: 0, date: null, description: '' };
-      const response = await fetch(`http://localhost:5000/api/projects/${id}/capx`, {
+      const response = await fetch(`${API_BASE_URL}/api/projects/${id}/capx`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -172,7 +173,7 @@ function ProjectDetails() {
     // non-edit fallback
     try {
       const newOpx = { projectId: id, item: '', amount: 0, date: null, description: '' };
-      const response = await fetch(`http://localhost:5000/api/projects/${id}/opx`, {
+      const response = await fetch(`${API_BASE_URL}/api/projects/${id}/opx`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -233,7 +234,7 @@ function ProjectDetails() {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/projects/capx/${rowId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/projects/capx/${rowId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }
       });
@@ -259,7 +260,7 @@ function ProjectDetails() {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/projects/opx/${rowId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/projects/opx/${rowId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }
       });
@@ -291,7 +292,7 @@ function ProjectDetails() {
       }
       try {
         for (const capx of capxData) {
-          const response = await fetch(`http://localhost:5000/api/projects/capx/${capx.id}`, {
+          const response = await fetch(`${API_BASE_URL}/api/projects/capx/${capx.id}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
@@ -343,7 +344,7 @@ function ProjectDetails() {
 
       // perform deletes
       for (const delId of toDelete) {
-        const res = await fetch(`http://localhost:5000/api/projects/capx/${delId}`, {
+        const res = await fetch(`${API_BASE_URL}/api/projects/capx/${delId}`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }
         });
@@ -357,7 +358,7 @@ function ProjectDetails() {
 
       // perform updates
       for (const capx of toUpdate) {
-        const res = await fetch(`http://localhost:5000/api/projects/capx/${capx.id}`, {
+        const res = await fetch(`${API_BASE_URL}/api/projects/capx/${capx.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -376,7 +377,7 @@ function ProjectDetails() {
       // perform creates
       for (const capx of toCreate) {
         const payload = { projectId: id, item: capx.item, amount: capx.amount, date: capx.date, description: capx.description };
-        const res = await fetch(`http://localhost:5000/api/projects/${id}/capx`, {
+        const res = await fetch(`${API_BASE_URL}/api/projects/${id}/capx`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -417,7 +418,7 @@ function ProjectDetails() {
       }
       try {
         for (const opx of opxData) {
-          const response = await fetch(`http://localhost:5000/api/projects/opx/${opx.id}`, {
+          const response = await fetch(`${API_BASE_URL}/api/projects/opx/${opx.id}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
@@ -460,7 +461,7 @@ function ProjectDetails() {
       const toUpdate = temp.filter(r => r.id > 0);
 
       for (const delId of toDelete) {
-        const res = await fetch(`http://localhost:5000/api/projects/opx/${delId}`, {
+        const res = await fetch(`${API_BASE_URL}/api/projects/opx/${delId}`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }
         });
@@ -473,7 +474,7 @@ function ProjectDetails() {
       }
 
       for (const opx of toUpdate) {
-        const res = await fetch(`http://localhost:5000/api/projects/opx/${opx.id}`, {
+        const res = await fetch(`${API_BASE_URL}/api/projects/opx/${opx.id}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -491,7 +492,7 @@ function ProjectDetails() {
 
       for (const opx of toCreate) {
         const payload = { projectId: id, item: opx.item, amount: opx.amount, date: opx.date, description: opx.description };
-        const res = await fetch(`http://localhost:5000/api/projects/${id}/opx`, {
+        const res = await fetch(`${API_BASE_URL}/api/projects/${id}/opx`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -565,7 +566,7 @@ function ProjectDetails() {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/projects/${id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/projects/${id}`, {
         method: 'PUT',
         body: formDataToSend
       });
@@ -1068,7 +1069,7 @@ function ProjectDetails() {
         }}>
           {formData && (
             <img
-              src={`http://localhost:5000${previewImage}`}
+              src={`${API_BASE_URL}${previewImage}`}
               alt={formData.name}
               style={{
                 position: 'absolute',

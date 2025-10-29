@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import API_BASE_URL from '../api/apiConfig';
 
 function AddProject() {
   const navigate = useNavigate();
@@ -66,7 +67,7 @@ function AddProject() {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/api/projects', {
+      const response = await fetch(`${API_BASE_URL}/api/projects`, {
         method: 'POST',
         body: formDataToSend
       });
