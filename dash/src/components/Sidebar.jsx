@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { FaHome, FaBox, FaUsers, FaChartLine, FaDollarSign, FaFileInvoiceDollar, FaUser, FaMoneyBillWave, FaProjectDiagram, } from 'react-icons/fa';
 import logo from '../assets/LOGO_KRISTELLAR WHITE.png';
@@ -75,6 +75,7 @@ function Sidebar() {
           >
             <FaMoneyBillWave style={{ marginRight: '8px' }} /> Revenue
           </NavLink>
+          {user && (user.role === 'Super-Admin') && (
           <NavLink
             to="/bill-expenditure"
             className={({ isActive }) => `sidebar-button ${isActive ? 'active' : ''}`}
@@ -82,6 +83,7 @@ function Sidebar() {
           >
             <FaMoneyBillWave style={{ marginRight: '8px' }} /> Beneficiary Bank Information
           </NavLink>
+          )}
           {user && (user.role === 'Admin' || user.role === 'Super-Admin') && (
           <NavLink
             to="/admin"
