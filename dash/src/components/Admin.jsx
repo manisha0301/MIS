@@ -5,10 +5,26 @@ import API_BASE_URL from '../api/apiConfig';
 const Admin = () => {
   const [activeTab, setActiveTab] = useState('view');
   const [users, setUsers] = useState([]);
-  const [newUser, setNewUser] = useState({ name: '', username: '', password: '', role: 'User' });
+  const [newUser, setNewUser] = useState({ 
+    name: '', 
+    username: '', 
+    password: '', 
+    role: 'User',
+    sidebarAccess: [],           // array of allowed section keys
+    permissionLevel: 'view',
+   });
   const [selectedIds, setSelectedIds] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const sidebarSections = [
+  { id: 'dashboard', label: 'Dashboard', alwaysVisible: true },
+  { id: 'operations', label: 'Operations (Products, Clients, Invoices)' },
+  { id: 'analytics', label: 'Analytics & Insights' },
+  { id: 'assets', label: 'Asset Management' },
+  { id: 'finance', label: 'Finance Setup (Super-Admin only)' },
+  { id: 'admin', label: 'System Administration' },
+];
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -361,33 +377,137 @@ const response = await fetch(`${API_BASE_URL}/api/admin/users`, {
                 </div>
 
                 <div>
-                  <label style={{ 
-                    display: 'block', 
-                    fontSize: '14px', 
-                    fontWeight: '600', 
-                    color: '#374151',
-                    marginBottom: '6px'
-                  }}>
-                    🏷️ Role
-                  </label>
-                  <select
-                    value={newUser.role}
-                    onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '12px 16px',
-                      border: '2px solid #e2e8f0',
-                      borderRadius: '8px',
-                      fontSize: '14px',
-                      backgroundColor: '#f9fafb',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <option value="User">User</option>
-                    <option value="Admin">Admin</option>
-                    <option value="Super-Admin">Super-Admin</option>
-                  </select>
-                </div>
+  <label style={{ 
+    display: 'block', 
+    fontSize: '14px', 
+    fontWeight: '600', 
+    color: '#374151',
+    marginBottom: '6px'
+  }}>
+    🏷️ Role
+  </label>
+  <select
+    value={newUser.role}
+    onChange={(e) => setNewUser({ 
+      ...newUser, 
+      role: e.target.value,
+      // Optional: reset fields when role changes
+      sidebarAccess: [],
+      permissionLevel: 'view'
+    })}
+    style={{
+      width: '100%',
+      padding: '12px 16px',
+      border: '2px solid #e2e8f0',
+      borderRadius: '8px',
+      fontSize: '14px',
+      backgroundColor: '#f9fafb',
+      cursor: 'pointer'
+    }}
+  >
+    <option value="User">User</option>
+    <option value="Admin">Admin</option>
+    <option value="Super-Admin">Super-Admin</option>
+  </select>
+</div>
+
+{/* Access Control - shown for User & Admin */}
+{(newUser.role === 'User' || newUser.role === 'Admin') && (
+  <div style={{ marginTop: '24px' }}>
+    <label style={{ 
+      display: 'block', 
+      fontSize: '16px', 
+      fontWeight: '700', 
+      color: '#1e293b',
+      marginBottom: '12px'
+    }}>
+      🔐 Access Control 
+    </label>
+    
+    <div style={{ 
+      display: 'grid', 
+      gap: '12px', 
+      background: '#f8fafc', 
+      padding: '16px', 
+      borderRadius: '10px',
+      border: '1px solid #e2e8f0'
+    }}>
+      {sidebarSections
+        .filter(section => !section.alwaysVisible) // skip dashboard if always visible
+        .map((section) => (
+          <label key={section.id} style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '12px',
+            fontSize: '14px',
+            cursor: 'pointer'
+          }}>
+            <input
+              type="checkbox"
+              checked={newUser.sidebarAccess.includes(section.id)}
+              onChange={(e) => {
+                if (e.target.checked) {
+                  setNewUser({
+                    ...newUser,
+                    sidebarAccess: [...newUser.sidebarAccess, section.id]
+                  });
+                } else {
+                  setNewUser({
+                    ...newUser,
+                    sidebarAccess: newUser.sidebarAccess.filter(id => id !== section.id)
+                  });
+                }
+              }}
+              style={{ transform: 'scale(1.3)' }}
+            />
+            {section.label}
+          </label>
+        ))}
+    </div>
+  </div>
+)}
+
+{/* Permission Level - shown ONLY for User */}
+{newUser.role === 'User' && (
+  <div style={{ marginTop: '28px' }}>
+    <label style={{ 
+      display: 'block', 
+      fontSize: '16px', 
+      fontWeight: '700', 
+      color: '#1e293b',
+      marginBottom: '12px'
+    }}>
+      ⚙️ Permission Level
+    </label>
+    
+    <select
+      value={newUser.permissionLevel}
+      onChange={(e) => setNewUser({ ...newUser, permissionLevel: e.target.value })}
+      style={{
+        width: '100%',
+        padding: '12px 16px',
+        border: '2px solid #e2e8f0',
+        borderRadius: '8px',
+        fontSize: '14px',
+        backgroundColor: '#f9fafb',
+        cursor: 'pointer'
+      }}
+    >
+      <option value="view">View Only</option>
+      <option value="add">Add Only</option>
+      <option value="edit">Edit Only</option>
+      <option value="full">Full Access (Add + Edit + Delete)</option>
+    </select>
+    
+    <p style={{ 
+      fontSize: '13px', 
+      color: '#64748b', 
+      marginTop: '8px' 
+    }}>
+      This level will control what actions the user can perform within their allowed sections.
+    </p>
+  </div>
+)}
 
                 <button
                   type="button"
