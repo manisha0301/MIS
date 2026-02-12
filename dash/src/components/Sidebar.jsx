@@ -13,6 +13,11 @@ import {
   FaChevronDown,
   FaPlus,
   FaMinus,
+  FaPhone,
+  FaPhoneAlt,
+  FaPhoneSlash,
+  FaPhoneSquareAlt,
+  FaPhoneVolume,
 } from 'react-icons/fa';
 import logo from '../assets/LOGO_KRISTELLAR WHITE.png';
 
@@ -212,12 +217,21 @@ function Sidebar() {
                 </NavLink>
 
                 <NavLink
-                  to="/others-electronic-assets"
+                  to="/cug"
                   className={({ isActive }) => `sidebar-button ${isActive ? 'active' : ''}`}
                   onClick={() => setIsOpen(false)}
                 >
-                  <FaMoneyBillWave style={{ marginRight: '10px' }} />
-                  Other Electronics Assets
+                  <FaPhoneAlt style={{ marginRight: '10px' }} />
+                  CUG Set
+                </NavLink>
+
+                <NavLink
+                  to="/alcatel"
+                  className={({ isActive }) => `sidebar-button ${isActive ? 'active' : ''}`}
+                  onClick={() => setIsOpen(false)}
+                >
+                  <FaPhoneVolume style={{ marginRight: '10px' }} />
+                  Alcatel Phones
                 </NavLink>
               </div>
             )}

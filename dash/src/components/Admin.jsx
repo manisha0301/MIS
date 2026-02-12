@@ -18,7 +18,7 @@ const Admin = () => {
   const [error, setError] = useState(null);
 
   const sidebarSections = [
-  { id: 'dashboard', label: 'Dashboard', alwaysVisible: true },
+  { id: 'dashboard', label: 'Dashboard' },
   { id: 'operations', label: 'Operations (Products, Clients, Invoices)' },
   { id: 'analytics', label: 'Analytics & Insights' },
   { id: 'assets', label: 'Asset Management' },

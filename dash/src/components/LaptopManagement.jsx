@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import * as XLSX from 'xlsx';
 import API_BASE_URL from '../api/apiConfig';
+import '../styles/AssetManagement.css';
 
 function LaptopManagement() {
   const [laptops, setLaptops] = useState([]);
@@ -20,6 +21,8 @@ function LaptopManagement() {
     purchaseTo: '',
     warrantyFrom: '',
     warrantyTo: '',
+    issueFrom: '',
+    issueTo: '',
   });
 
   // Add this new state
@@ -32,6 +35,8 @@ function LaptopManagement() {
     purchaseTo: '',
     warrantyFrom: '',
     warrantyTo: '',
+    issueFrom: '',
+    issueTo: '',
   });
 
   // Form state - used for both add and edit
@@ -40,15 +45,19 @@ function LaptopManagement() {
     employeeId: '',
     name: '',
     windows: '',
+    windowsCustom: '',
     kristellarAD: false,
     serialNumber: '',
     model: '',
     cpu: '',
     storage: '',
+    storageCustom: '',
     ram: '',
+    ramCustom: '',
     gpu: '',
     purchaseDate: '',
     warrantyExpDate: '',
+    issueDate: '',
   });
 
   // Dummy data
@@ -68,6 +77,7 @@ function LaptopManagement() {
         gpu: 'NVIDIA GeForce RTX 5060 Laptop GPU',
         purchaseDate: '2024-05-15',
         warrantyExpDate: '2027-05-14',
+        issueDate: '2024-05-20',
       },
       {
         id: 2,
@@ -83,6 +93,7 @@ function LaptopManagement() {
         gpu: 'NVIDIA GeForce RTX 4060 Laptop GPU',
         purchaseDate: '2024-06-10',
         warrantyExpDate: '2027-06-09',
+        issueDate: '2024-06-15',
       },
       {
         id: 3,
@@ -98,6 +109,7 @@ function LaptopManagement() {
         gpu: 'Intel(R) Arc(TM) Graphics',
         purchaseDate: '2025-01-20',
         warrantyExpDate: '2028-01-19',
+        issueDate: '2025-01-25',
       },
     ];
     setLaptops(dummyData);
@@ -139,6 +151,7 @@ function LaptopManagement() {
         laptop.cpu?.toLowerCase().includes(term) ||
         laptop.gpu?.toLowerCase().includes(term) ||
         laptop.purchaseDate?.includes(term) ||
+        laptop.issueDate?.toLowerCase().includes(term) ||
         laptop.warrantyExpDate?.includes(term)
       );
     }
@@ -168,6 +181,12 @@ function LaptopManagement() {
     }
     if (appliedFilters.warrantyTo) {
       result = result.filter(l => l.warrantyExpDate <= appliedFilters.warrantyTo);
+    }
+    if (appliedFilters.issueFrom) {
+      result = result.filter(l => l.issueDate >= appliedFilters.issueFrom);
+    }
+    if (appliedFilters.issueTo) {
+      result = result.filter(l => l.issueDate <= appliedFilters.issueTo);
     }
 
     setFilteredLaptops(result);
@@ -204,9 +223,24 @@ function LaptopManagement() {
   const handleAddLaptop = (e) => {
     e.preventDefault();
 
+    const finalWindows = formData.windows === "others" 
+      ? (formData.windowsCustom || "Others") 
+      : formData.windows;
+
+    const finalRam = formData.ram === "others" 
+      ? (formData.ramCustom || "Others") 
+      : formData.ram;
+
+    const finalStorage = formData.storage === "others" 
+      ? (formData.storageCustom || "Others") 
+      : formData.storage;
+
     const newLaptop = {
       id: laptops.length + 1,
       ...formData,
+      windows: finalWindows,
+      ram: finalRam,
+      storage: finalStorage,
       kristellarAD: formData.kristellarAD === 'true' || formData.kristellarAD === true,
     };
 
@@ -222,8 +256,23 @@ function LaptopManagement() {
   const handleEditLaptop = (e) => {
     e.preventDefault();
 
+    const finalWindows = formData.windows === "others" 
+      ? (formData.windowsCustom || "Others") 
+      : formData.windows;
+
+    const finalRam = formData.ram === "others" 
+      ? (formData.ramCustom || "Others") 
+      : formData.ram;
+
+    const finalStorage = formData.storage === "others" 
+      ? (formData.storageCustom || "Others") 
+      : formData.storage;
+
     const updatedLaptop = {
       ...formData,
+      windows: finalWindows,
+      ram: finalRam,
+      storage: finalStorage,
       kristellarAD: formData.kristellarAD === 'true' || formData.kristellarAD === true,
     };
 
@@ -237,6 +286,37 @@ function LaptopManagement() {
     resetForm();
     setShowEditModal(false);
     alert('Laptop updated successfully!');
+  };
+
+  const handleDeleteLaptop = (id) => {
+    if (!window.confirm("Are you sure you want to delete this laptop record?")) {
+      return;
+    }
+
+    setLaptops(prev => prev.filter(laptop => laptop.id !== id));
+    setFilteredLaptops(prev => prev.filter(laptop => laptop.id !== id));
+
+    // Optional: show success message
+    alert("Laptop record deleted successfully.");
+  };
+
+  // Helper to count how many filters are actually set
+  const getActiveFilterCount = () => {
+    const filters = appliedFilters;
+    let count = 0;
+
+    if (filters.windows) count++;
+    if (filters.kristellarAD !== '') count++;
+    if (filters.ram) count++;
+    if (filters.storage) count++;
+    if (filters.purchaseFrom) count++;
+    if (filters.purchaseTo) count++;
+    if (filters.warrantyFrom) count++;
+    if (filters.warrantyTo) count++;
+    if (filters.issueFrom) count++;
+    if (filters.issueTo) count++;
+
+    return count;
   };
 
   const resetForm = () => {
@@ -298,6 +378,7 @@ function LaptopManagement() {
         gpu: row[9] || '',
         purchaseDate: row[10] || '',
         warrantyExpDate: row[11] || '',
+        issueDate: row[12] || ''
       }));
 
       setLaptops((prev) => [...prev, ...importedLaptops]);
@@ -381,7 +462,10 @@ function LaptopManagement() {
             minWidth: '110px'
           }}
         >
-          {showFilterPanel ? 'Close Filter' : 'Filters'}
+          {showFilterPanel 
+            ? 'Close Filter' 
+            : `Filters${getActiveFilterCount() > 0 ? ` (${getActiveFilterCount()})` : ''}`
+          }
         </button>
 
         {/* Filter Panel */}
@@ -523,6 +607,29 @@ function LaptopManagement() {
                   />
                 </div>
               </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label className="form-label">Issue From</label>
+                  <input
+                    type="date"
+                    name="issueFrom"
+                    value={filterInputs.issueFrom}
+                    onChange={handleFilterChange}
+                    className="form-input"
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Issue To</label>
+                  <input
+                    type="date"
+                    name="issueTo"
+                    value={filterInputs.issueTo}
+                    onChange={handleFilterChange}
+                    className="form-input"
+                  />
+                </div>
+              </div>
             </div>
 
             <div style={{ marginTop: '20px', textAlign: 'right', display: 'flex', justifyContent: 'space-between' }}>
@@ -584,7 +691,7 @@ function LaptopManagement() {
                 <td>{laptop.kristellarAD ? 'Yes' : 'No'}</td>
                 <td>{laptop.warrantyExpDate || '-'}</td>
                 <td onClick={(e) => e.stopPropagation()}>
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <button
                       className="action-button"
                       onClick={(e) => {
@@ -602,6 +709,20 @@ function LaptopManagement() {
                       }}
                     >
                       Edit
+                    </button>
+                    <button
+                      className="action-button"
+                      style={{
+                        backgroundColor: '#ef4444',
+                        color: 'white',
+                        border: 'none',
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteLaptop(laptop.id);
+                      }}
+                    >
+                      Delete
                     </button>
                   </div>
                 </td>
@@ -693,7 +814,7 @@ function LaptopManagement() {
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: '780px', width: '92%' }}>
             <div className="modal-header-wrapper">
-              <h2 className="modal-header">Laptop Details – {selectedLaptop.employeeId}</h2>
+              <h2 className="modal-header">Laptop Details</h2>
               <button
                 className="modal-close-btn"
                 onClick={() => setShowDetailModal(false)}
@@ -753,6 +874,12 @@ function LaptopManagement() {
                   <div className="detail-label">Warranty Expiry</div>
                   <div className="detail-value">{<HighlightText text={selectedLaptop.warrantyExpDate} searchTerm={searchTerm} /> || '—'}</div>
                 </div>
+                <div className="detail-item">
+                  <div className="detail-label">Issue Date</div>
+                  <div className="detail-value">
+                    {<HighlightText text={selectedLaptop.issueDate} searchTerm={searchTerm} /> || '—'}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -764,361 +891,6 @@ function LaptopManagement() {
           </div>
         </div>
       )}
-
-      <style >{`
-      .modal-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1200;
-  backdrop-filter: blur(4px);
-}
-
-.modal-content {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
-  width: 92%;
-  max-width: 820px;
-  max-height: 92vh;
-  overflow-y: auto;
-  position: relative;
-}
-
-.modal-header-wrapper {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid #e5e7eb;
-  background: #f8fafc;
-  border-radius: 12px 12px 0 0;
-}
-
-.modal-header {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #1e293b;
-}
-
-.modal-close-btn {
-  background: none;
-  border: none;
-  font-size: 2rem;
-  font-weight: 300;
-  color: #64748b;
-  cursor: pointer;
-  line-height: 1;
-  padding: 0 8px;
-}
-
-.modal-close-btn:hover {
-  color: #ef4444;
-}
-
-.laptop-form {
-  padding: 24px;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px 24px;
-}
-
-.form-column {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.form-group.full-width {
-  grid-column: 1 / -1;
-}
-
-.form-label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #334155;
-}
-
-.form-input,
-.form-select {
-  width: 100%;
-  padding: 11px 14px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  font-size: 0.95rem;
-  background-color: #ffffff;
-  transition: all 0.2s ease;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
-}
-
-.form-input:focus,
-.form-select:focus {
-  outline: none;
-  border-color: #0ea5e9;
-  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
-}
-
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 32px;
-  padding-top: 20px;
-  border-top: 1px solid #e5e7eb;
-}
-
-.btn-primary {
-  background-color: #006d77;
-  color: white;
-  border: none;
-  padding: 12px 28px;
-  border-radius: 6px;
-  font-size: 0.98rem;
-  font-weight: 600;
-  cursor: pointer;
-  min-width: 140px;
-}
-
-.btn-primary:hover {
-  background-color: #118ab2;
-}
-
-.btn-secondary {
-  background-color: #e2e8f0;
-  color: #475569;
-  border: none;
-  padding: 12px 28px;
-  border-radius: 6px;
-  font-size: 0.98rem;
-  font-weight: 600;
-  cursor: pointer;
-  min-width: 140px;
-}
-
-.btn-secondary:hover {
-  background-color: #cbd5e1;
-}
-
-.required {
-  color: #ef4444;
-  font-weight: 600;
-}
-  .form-group {
-          margin-bottom: 16px;
-        }
-
-        .form-label {
-          display: block;
-          font-size: 14px;
-          font-weight: 600;
-          color: #1e293b;
-          margin-bottom: 6px;
-        }
-
-        .form-input, .form-select {
-          width: 100%;
-          padding: 10px 12px;
-          border: 1px solid #e2e8f0;
-          border-radius: 6px;
-          font-size: 14px;
-          color: #1e293b;
-          background-color: #ffffff;
-          box-sizing: border-box;
-        }
-
-        .form-input:focus, .form-select:focus {
-          outline: none;
-          border-color: #0a9396;
-          box-shadow: 0 0 0 2px rgba(10, 147, 150, 0.1);
-        }
-
-        .form-buttons {
-          display: flex;
-          gap: 12px;
-          margin-top: 20px;
-        }
-
-        .btn-primary {
-          flex: 1;
-          background-color: #005f73;
-          color: white;
-          border: none;
-          padding: 12px 16px;
-          border-radius: 6px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: background-color 0.3s ease, transform 0.2s ease;
-        }
-
-        .btn-primary:hover {
-          background-color: #0a9396;
-          transform: translateY(-2px);
-        }
-
-        .btn-secondary {
-          flex: 1;
-          background-color: #64748b;
-          color: white;
-          border: none;
-          padding: 12px 16px;
-          border-radius: 6px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: background-color 0.3s ease, transform 0.2s ease;
-        }
-
-        .btn-secondary:hover {
-          background-color: #475569;
-          transform: translateY(-2px);
-        }
-
-        .btn-pdf {
-          background-color: #2563eb;
-          color: white;
-          border: none;
-          padding: 8px 12px;
-          border-radius: 6px;
-          font-size: 12px;
-          cursor: pointer;
-          transition: background-color 0.3s ease;
-        }
-
-        .btn-pdf:hover {
-          background-color: #1d4ed8;
-        }
-
-        .pdf-viewer {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
-          background-color: rgba(0, 0, 0, 0.8);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 2000;
-        }
-
-        .pdf-content {
-          background: white;
-          border-radius: 8px;
-          padding: 20px;
-          width: 90%;
-          max-width: 800px;
-          max-height: 90vh;
-          overflow-y: auto;
-        }
-
-        table {
-          width: 100%;
-          border-collapse: collapse;
-        }
-
-        th, td {
-          padding: 12px;
-          text-align: left;
-          border-bottom: 1px solid #e2e8f0;
-        }
-
-        th {
-          background-color: #f8fafc;
-          font-weight: 600;
-        }
-
-        .search-input {
-          width: 100%;
-          padding: 10px 12px;
-          border: 1px solid #e2e8f0;
-          border-radius: 6px;
-          font-size: 14px;
-          color: #1e293b;
-          background-color: #ffffff;
-          box-sizing: border-box;
-        }
-
-       .search-input:focus {
-          outline: none;
-          border-color: #0a9396;
-          box-shadow: 0 0 0 2px rgba(10, 147, 150, 0.1);
-        }
-
-        .modal-body {
-  padding: 24px 28px;
-  background: #ffffff;
-}
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 20px 32px;
-}
-
-.detail-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.detail-label {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #475569;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-
-.detail-value {
-  font-size: 1.05rem;
-  color: #1e293b;
-  line-height: 1.4;
-  word-break: break-word;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  padding: 20px 28px;
-  border-top: 1px solid #e5e7eb;
-  background: #f8fafc;
-  border-radius: 0 0 12px 12px;
-}
-
-/* Optional: make long values look better */
-.detail-value:empty::before {
-  content: "—";
-  color: #94a3b8;
-}
-  mark {
-  background-color: #fff3cd !important;
-  color: #856404;
-  padding: 1px 3px;
-  border-radius: 3px;
-  font-weight: 500;
-}
-
-/* Optional: more modern highlight style */
-mark {
-  background: linear-gradient(120deg, #ffecb3 0%, #ffecb3 100%);
-  background-repeat: no-repeat;
-  background-size: 100% 30%;
-  background-position: 0 70%;
-  padding: 0 2px;
-  border-radius: 2px;
-}
-  
-      `}</style>
     </div>
   );
 }
@@ -1156,7 +928,7 @@ function LaptopFormFields({ formData, handleInputChange }) {
 
         <div className="form-group">
           <label className="form-label">
-            Windows Version <span className="required">*</span>
+            OS <span className="required">*</span>
           </label>
           <select
             className="form-select"
@@ -1165,16 +937,31 @@ function LaptopFormFields({ formData, handleInputChange }) {
             value={formData.windows}
             onChange={handleInputChange}
           >
-            <option value="">Select Windows Version</option>
+            <option value="">Select OS</option>
             <option value="Windows 11 Home">Windows 11 Home</option>
             <option value="Windows 11 Pro">Windows 11 Pro</option>
-            <option value="Windows 11 Enterprise">Windows 11 Enterprise</option>
-            <option value="Windows 10 Pro">Windows 10 Pro</option>
-            <option value="Windows 10 Enterprise">Windows 10 Enterprise</option>
-            <option value="No OS">No OS / Linux</option>
+            <option value="Windows 10">Windows 10</option>
+            <option value="Ubuntu">Ubuntu</option>
+            <option value="macOS">macOS</option>
+            <option value="Linux">Other Linux</option>
+            <option value="others">Others</option>
           </select>
+
+          {formData.windows === "others" && (
+            <input
+              type="text"
+              className="form-input"
+              name="windowsCustom"
+              value={formData.windowsCustom || ""}
+              onChange={handleInputChange}
+              placeholder="Specify OS (e.g. Fedora 40, Chrome OS...)"
+              style={{ marginTop: "8px" }}
+              required
+            />
+          )}
         </div>
 
+        {/* ── RAM with Others ── */}
         <div className="form-group">
           <label className="form-label">
             RAM <span className="required">*</span>
@@ -1191,11 +978,22 @@ function LaptopFormFields({ formData, handleInputChange }) {
             <option value="16 GB">16 GB</option>
             <option value="24 GB">24 GB</option>
             <option value="32 GB">32 GB</option>
-            <option value="7.69 GB">~8 GB (7.69 GB)</option>
-            <option value="15.26 GB">~16 GB (15.26 GB)</option>
-            <option value="15.63 GB">~16 GB (15.63 GB)</option>
-            <option value="31.37 GB">~32 GB (31.37 GB)</option>
+            <option value="64 GB">64 GB</option>
+            <option value="others">Others</option>
           </select>
+
+          {formData.ram === "others" && (
+            <input
+              type="text"
+              className="form-input"
+              name="ramCustom"
+              value={formData.ramCustom || ""}
+              onChange={handleInputChange}
+              placeholder="e.g. 12 GB, 18 GB..."
+              style={{ marginTop: "8px" }}
+              required
+            />
+          )}
         </div>
 
         <div className="form-group">
@@ -1264,11 +1062,23 @@ function LaptopFormFields({ formData, handleInputChange }) {
             <option value="">Select Storage</option>
             <option value="256 GB">256 GB</option>
             <option value="512 GB">512 GB</option>
-            <option value="476.94 GB">476.94 GB (~500 GB)</option>
-            <option value="953.86 GB">953.86 GB (~1 TB)</option>
             <option value="1 TB">1 TB</option>
             <option value="2 TB">2 TB</option>
+            <option value="others">Others</option>
           </select>
+
+          {formData.storage === "others" && (
+            <input
+              type="text"
+              className="form-input"
+              name="storageCustom"
+              value={formData.storageCustom || ""}
+              onChange={handleInputChange}
+              placeholder="e.g. 128 GB, 4 TB..."
+              style={{ marginTop: "8px" }}
+              required
+            />
+          )}
         </div>
 
         <div className="form-group">
@@ -1302,6 +1112,17 @@ function LaptopFormFields({ formData, handleInputChange }) {
           className="form-input"
           name="warrantyExpDate"
           value={formData.warrantyExpDate}
+          onChange={handleInputChange}
+        />
+      </div>
+
+      <div className="form-group full-width">
+        <label className="form-label">Issue Date (Assigned to Employee)</label>
+        <input
+          type="date"
+          className="form-input"
+          name="issueDate"
+          value={formData.issueDate}
           onChange={handleInputChange}
         />
       </div>
