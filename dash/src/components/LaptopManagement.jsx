@@ -3,6 +3,16 @@ import * as XLSX from 'xlsx';
 import API_BASE_URL from '../api/apiConfig';
 import '../styles/AssetManagement.css';
 
+const excelDateToJSDate = (serial) => {
+  if (typeof serial !== 'number') return serial ? String(serial).trim() : null;
+  
+  const utc_days = Math.floor(serial - 25569);
+  const utc_value = utc_days * 86400;
+  const date_info = new Date(utc_value * 1000);
+  const date = new Date(date_info.getUTCFullYear(), date_info.getUTCMonth(), date_info.getUTCDate());
+  return date.toISOString().split('T')[0]; // YYYY-MM-DD
+};
+
 function LaptopManagement() {
   const [laptops, setLaptops] = useState([]);
   const [filteredLaptops, setFilteredLaptops] = useState([]);
@@ -14,7 +24,7 @@ function LaptopManagement() {
   const [showFilterPanel, setShowFilterPanel] = useState(false);
   const [filterInputs, setFilterInputs] = useState({
     windows: '',
-    kristellarAD: '',       // '' = all, 'true', 'false'
+    kristellar_ad: '',       // '' = all, 'true', 'false'
     ram: '',
     storage: '',
     purchaseFrom: '',
@@ -28,7 +38,7 @@ function LaptopManagement() {
   // Add this new state
   const [appliedFilters, setAppliedFilters] = useState({
     windows: '',
-    kristellarAD: '',
+    kristellar_ad: '',
     ram: '',
     storage: '',
     purchaseFrom: '',
@@ -42,12 +52,12 @@ function LaptopManagement() {
   // Form state - used for both add and edit
   const [formData, setFormData] = useState({
     id: null,
-    employeeId: '',
+    employee_id: '',
     name: '',
     windows: '',
     windowsCustom: '',
-    kristellarAD: false,
-    serialNumber: '',
+    kristellar_ad: false,
+    serial_number: '',
     model: '',
     cpu: '',
     storage: '',
@@ -55,65 +65,51 @@ function LaptopManagement() {
     ram: '',
     ramCustom: '',
     gpu: '',
-    purchaseDate: '',
-    warrantyExpDate: '',
-    issueDate: '',
+    purchase_date: '',
+    warranty_exp_date: '',
+    issue_date: '',
   });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Dummy data
+  // Fetch laptops from backend
   useEffect(() => {
-    const dummyData = [
-      {
-        id: 1,
-        employeeId: 'KA002',
-        name: 'Satyajit Panda',
-        windows: 'Windows 11 pro',
-        kristellarAD: true,
-        serialNumber: 'T5NRCX01B22119B',
-        model: 'ROG Zephyrus G14 GA403UM_GA403UM',
-        cpu: 'AMD Ryzen 9 270 w/ Radeon 780M Graphics',
-        storage: '953.86 GB',
-        ram: '15.29 GB',
-        gpu: 'NVIDIA GeForce RTX 5060 Laptop GPU',
-        purchaseDate: '2024-05-15',
-        warrantyExpDate: '2027-05-14',
-        issueDate: '2024-05-20',
-      },
-      {
-        id: 2,
-        employeeId: 'KA003',
-        name: 'Neha Kathar',
-        windows: 'Windows 11 pro',
-        kristellarAD: true,
-        serialNumber: 'S4NRKD030555167',
-        model: 'ASUS TUF Gaming F15 FX507VV_FX507VV',
-        cpu: '13th Gen Intel(R) Core(TM) i7-13620H',
-        storage: '476.94 GB',
-        ram: '15.63 GB',
-        gpu: 'NVIDIA GeForce RTX 4060 Laptop GPU',
-        purchaseDate: '2024-06-10',
-        warrantyExpDate: '2027-06-09',
-        issueDate: '2024-06-15',
-      },
-      {
-        id: 3,
-        employeeId: 'KA012',
-        name: 'Ayushi Shrivas',
-        windows: 'Windows 11 pro',
-        kristellarAD: true,
-        serialNumber: '5CD35145PN',
-        model: 'HP Spectre x360 2-in-1 Laptop 14-eu0xxx',
-        cpu: 'Intel(R) Core(TM) Ultra 7 155H',
-        storage: '953.86 GB',
-        ram: '31.37 GB',
-        gpu: 'Intel(R) Arc(TM) Graphics',
-        purchaseDate: '2025-01-20',
-        warrantyExpDate: '2028-01-19',
-        issueDate: '2025-01-25',
-      },
-    ];
-    setLaptops(dummyData);
-    setFilteredLaptops(dummyData);
+    const fetchLaptops = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const token = sessionStorage.getItem('token');
+        if (!token) throw new Error('No authentication token found');
+
+        const response = await fetch(`${API_BASE_URL}/api/laptops`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            // Optional: handle logout / redirect to login
+            throw new Error('Session expired. Please log in again.');
+          }
+          throw new Error('Failed to fetch laptops');
+        }
+
+        const data = await response.json();
+        console.log("Data: ", data);
+        setLaptops(data);
+        setFilteredLaptops(data);
+      } catch (err) {
+        console.error(err);
+        setError(err.message || 'Something went wrong');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLaptops();
   }, []);
 
   // Search filter
@@ -121,16 +117,16 @@ function LaptopManagement() {
     const term = searchTerm.toLowerCase();
     const filtered = laptops.filter(
       (laptop) =>
-        laptop.employeeId?.toLowerCase().includes(term) ||
+        laptop.employee_id?.toLowerCase().includes(term) ||
         laptop.name?.toLowerCase().includes(term) ||
-        laptop.serialNumber?.toLowerCase().includes(term) ||
+        laptop.serial_number?.toLowerCase().includes(term) ||
         laptop.windows?.toLowerCase().includes(term) ||
         laptop.cpu?.toLowerCase().includes(term) ||
         laptop.storage?.toLowerCase().includes(term) ||
         laptop.ram?.toLowerCase().includes(term) ||
         laptop.gpu?.toLowerCase().includes(term) ||
-        laptop.purchaseDate?.toLowerCase().includes(term) ||
-        laptop.warrantyExpDate?.toLowerCase().includes(term) ||
+        laptop.purchase_date?.toLowerCase().includes(term) ||
+        laptop.warranty_exp_date?.toLowerCase().includes(term) ||
         laptop.model?.toLowerCase().includes(term)
     );
     setFilteredLaptops(filtered);
@@ -143,16 +139,16 @@ function LaptopManagement() {
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       result = result.filter(laptop =>
-        laptop.employeeId?.toLowerCase().includes(term) ||
+        laptop.employee_id?.toLowerCase().includes(term) ||
         laptop.name?.toLowerCase().includes(term) ||
-        laptop.serialNumber?.toLowerCase().includes(term) ||
+        laptop.serial_number?.toLowerCase().includes(term) ||
         laptop.model?.toLowerCase().includes(term) ||
         laptop.windows?.toLowerCase().includes(term) ||
         laptop.cpu?.toLowerCase().includes(term) ||
         laptop.gpu?.toLowerCase().includes(term) ||
-        laptop.purchaseDate?.includes(term) ||
-        laptop.issueDate?.toLowerCase().includes(term) ||
-        laptop.warrantyExpDate?.includes(term)
+        laptop.purchase_date?.includes(term) ||
+        laptop.issue_date?.toLowerCase().includes(term) ||
+        laptop.warranty_exp_date?.includes(term)
       );
     }
 
@@ -160,9 +156,9 @@ function LaptopManagement() {
     if (appliedFilters.windows) {
       result = result.filter(l => l.windows === appliedFilters.windows);
     }
-    if (appliedFilters.kristellarAD !== '') {
-      const value = appliedFilters.kristellarAD === 'true';
-      result = result.filter(l => l.kristellarAD === value);
+    if (appliedFilters.kristellar_ad !== '') {
+      const value = appliedFilters.kristellar_ad === 'true';
+      result = result.filter(l => l.kristellar_ad === value);
     }
     if (appliedFilters.ram) {
       result = result.filter(l => l.ram === appliedFilters.ram);
@@ -171,22 +167,22 @@ function LaptopManagement() {
       result = result.filter(l => l.storage === appliedFilters.storage);
     }
     if (appliedFilters.purchaseFrom) {
-      result = result.filter(l => l.purchaseDate >= appliedFilters.purchaseFrom);
+      result = result.filter(l => l.purchase_date >= appliedFilters.purchaseFrom);
     }
     if (appliedFilters.purchaseTo) {
-      result = result.filter(l => l.purchaseDate <= appliedFilters.purchaseTo);
+      result = result.filter(l => l.purchase_date <= appliedFilters.purchaseTo);
     }
     if (appliedFilters.warrantyFrom) {
-      result = result.filter(l => l.warrantyExpDate >= appliedFilters.warrantyFrom);
+      result = result.filter(l => l.warranty_exp_date >= appliedFilters.warrantyFrom);
     }
     if (appliedFilters.warrantyTo) {
-      result = result.filter(l => l.warrantyExpDate <= appliedFilters.warrantyTo);
+      result = result.filter(l => l.warranty_exp_date <= appliedFilters.warrantyTo);
     }
     if (appliedFilters.issueFrom) {
-      result = result.filter(l => l.issueDate >= appliedFilters.issueFrom);
+      result = result.filter(l => l.issue_date >= appliedFilters.issueFrom);
     }
     if (appliedFilters.issueTo) {
-      result = result.filter(l => l.issueDate <= appliedFilters.issueTo);
+      result = result.filter(l => l.issue_date <= appliedFilters.issueTo);
     }
 
     setFilteredLaptops(result);
@@ -201,7 +197,7 @@ function LaptopManagement() {
   const clearFilters = () => {
     setFilterInputs({
       windows: '',
-      kristellarAD: '',
+      kristellar_ad: '',
       ram: '',
       storage: '',
       purchaseFrom: '',
@@ -219,85 +215,204 @@ function LaptopManagement() {
     }));
   };
 
+  const prepareEditFormData = (laptop) => {
+    if (!laptop) return formData;
+
+    // OS
+    let windows = laptop.windows || '';
+    let windowsCustom = '';
+    const osOptions = [
+      'Windows 11 Home', 'Windows 11 Pro', 'Windows 11 pro',
+      'Windows 10', 'Ubuntu', 'macOS', 'Linux', 'No OS'
+    ];
+    if (windows && !osOptions.includes(windows)) {
+      windows = 'others';
+      windowsCustom = laptop.windows;
+    }
+
+    // RAM
+    let ram = laptop.ram || '';
+    let ramCustom = '';
+    const ramOptions = ['8 GB', '16 GB', '24 GB', '32 GB', '64 GB'];
+    if (ram && !ramOptions.includes(ram)) {
+      ram = 'others';
+      ramCustom = laptop.ram;
+    }
+
+    // Storage
+    let storage = laptop.storage || '';
+    let storageCustom = '';
+    const storageOptions = ['256 GB', '512 GB', '1 TB', '2 TB'];
+    if (storage && !storageOptions.includes(storage)) {
+      storage = 'others';
+      storageCustom = laptop.storage;
+    }
+
+    // Dates → YYYY-MM-DD for <input type="date">
+    const purchase_date = formatDateToYYYYMMDD(laptop.purchase_date) || '';
+    const warranty_exp_date = formatDateToYYYYMMDD(laptop.warranty_exp_date) || '';
+    const issue_date = formatDateToYYYYMMDD(laptop.issue_date) || '';
+
+    return {
+      ...laptop,
+      windows,
+      windowsCustom,
+      ram,
+      ramCustom,
+      storage,
+      storageCustom,
+      purchase_date,
+      warranty_exp_date,
+      issue_date,
+    };
+  };
+
   // ── ADD ───────────────────────────────────────────────
-  const handleAddLaptop = (e) => {
+  const handleAddLaptop = async (e) => {
     e.preventDefault();
 
-    const finalWindows = formData.windows === "others" 
-      ? (formData.windowsCustom || "Others") 
-      : formData.windows;
+    const finalWindows = formData.windows === "others"
+    ? (formData.windowsCustom || "Others")
+    : formData.windows;
+    const finalRam = formData.ram === "others"
+    ? (formData.ramCustom || "Others")
+    : formData.ram;
+    const finalStorage = formData.storage === "others"
+    ? (formData.storageCustom || "Others")
+    : formData.storage;
 
-    const finalRam = formData.ram === "others" 
-      ? (formData.ramCustom || "Others") 
-      : formData.ram;
-
-    const finalStorage = formData.storage === "others" 
-      ? (formData.storageCustom || "Others") 
-      : formData.storage;
-
-    const newLaptop = {
-      id: laptops.length + 1,
-      ...formData,
+    const payload = {
+      employeeId: formData.employee_id,
+      name: formData.name,
       windows: finalWindows,
-      ram: finalRam,
+      kristellarAD: formData.kristellar_ad,
+      serialNumber: formData.serial_number,
+      model: formData.model,
+      cpu: formData.cpu,
       storage: finalStorage,
-      kristellarAD: formData.kristellarAD === 'true' || formData.kristellarAD === true,
+      ram: finalRam,
+      gpu: formData.gpu,
+      purchaseDate: formData.purchase_date || null,
+      warrantyExpDate: formData.warranty_exp_date || null,
+      issueDate: formData.issue_date || null,
     };
 
-    setLaptops((prev) => [...prev, newLaptop]);
-    setFilteredLaptops((prev) => [...prev, newLaptop]);
+    try {
+      const token = sessionStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/api/laptops`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
 
-    resetForm();
-    setShowAddModal(false);
-    alert('Laptop added successfully!');
+      if (!res.ok) throw new Error('Failed to add laptop');
+
+      const newLaptop = await res.json();
+      setLaptops(prev => [...prev, newLaptop]);
+      // filters will auto-update via useEffect
+
+      resetForm();
+      setShowAddModal(false);
+      alert('Laptop added successfully!');
+    } catch (err) {
+      console.error(err);
+      alert('Error adding laptop: ' + err.message);
+    }
   };
 
   // ── EDIT ──────────────────────────────────────────────
-  const handleEditLaptop = (e) => {
+  const handleEditLaptop = async (e) => {
     e.preventDefault();
 
-    const finalWindows = formData.windows === "others" 
-      ? (formData.windowsCustom || "Others") 
-      : formData.windows;
+    const finalWindows = formData.windows === "others"
+    ? (formData.windowsCustom || "Others")
+    : formData.windows;
+    const finalRam = formData.ram === "others"
+    ? (formData.ramCustom || "Others")
+    : formData.ram;
+    const finalStorage = formData.storage === "others"
+    ? (formData.storageCustom || "Others")
+    : formData.storage;
 
-    const finalRam = formData.ram === "others" 
-      ? (formData.ramCustom || "Others") 
-      : formData.ram;
-
-    const finalStorage = formData.storage === "others" 
-      ? (formData.storageCustom || "Others") 
-      : formData.storage;
-
-    const updatedLaptop = {
-      ...formData,
+    const payload = {
+      employeeId: formData.employee_id,
+      name: formData.name,
       windows: finalWindows,
-      ram: finalRam,
+      kristellarAD: formData.kristellar_ad,
+      serialNumber: formData.serial_number,
+      model: formData.model,
+      cpu: formData.cpu,
       storage: finalStorage,
-      kristellarAD: formData.kristellarAD === 'true' || formData.kristellarAD === true,
+      ram: finalRam,
+      gpu: formData.gpu,
+      purchaseDate: formData.purchase_date || null,
+      warrantyExpDate: formData.warranty_exp_date || null,
+      issueDate: formData.issue_date || null,
     };
 
-    setLaptops((prev) =>
-      prev.map((l) => (l.id === updatedLaptop.id ? updatedLaptop : l))
-    );
-    setFilteredLaptops((prev) =>
-      prev.map((l) => (l.id === updatedLaptop.id ? updatedLaptop : l))
-    );
+    try {
+      const token = sessionStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/api/laptops/${formData.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
 
-    resetForm();
-    setShowEditModal(false);
-    alert('Laptop updated successfully!');
+      if (!res.ok) throw new Error('Failed to update laptop');
+
+      const updatedLaptop = await res.json();
+
+      setLaptops(prev =>
+        prev.map(l => (l.id === updatedLaptop.id ? updatedLaptop : l))
+      );
+      // filters will auto-update
+
+      resetForm();
+      setShowEditModal(false);
+      alert('Laptop updated successfully!');
+    } catch (err) {
+      console.error(err);
+      alert('Error updating laptop: ' + err.message);
+    }
   };
 
-  const handleDeleteLaptop = (id) => {
-    if (!window.confirm("Are you sure you want to delete this laptop record?")) {
-      return;
+  const handleDeleteLaptop = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this laptop record?")) return;
+
+    try {
+      const token = sessionStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/api/laptops/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) throw new Error('Failed to delete laptop');
+
+      setLaptops(prev => prev.filter(l => l.id !== id));
+      // filters auto-update
+
+      alert("Laptop record deleted successfully.");
+    } catch (err) {
+      console.error(err);
+      alert('Error deleting laptop: ' + err.message);
     }
+  };
 
-    setLaptops(prev => prev.filter(laptop => laptop.id !== id));
-    setFilteredLaptops(prev => prev.filter(laptop => laptop.id !== id));
-
-    // Optional: show success message
-    alert("Laptop record deleted successfully.");
+  const formatDateToYYYYMMDD = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   // Helper to count how many filters are actually set
@@ -306,7 +421,7 @@ function LaptopManagement() {
     let count = 0;
 
     if (filters.windows) count++;
-    if (filters.kristellarAD !== '') count++;
+    if (filters.kristellar_ad !== '') count++;
     if (filters.ram) count++;
     if (filters.storage) count++;
     if (filters.purchaseFrom) count++;
@@ -322,18 +437,19 @@ function LaptopManagement() {
   const resetForm = () => {
     setFormData({
       id: null,
-      employeeId: '',
+      employee_id: '',
       name: '',
       windows: '',
-      kristellarAD: false,
-      serialNumber: '',
+      kristellar_ad: false,
+      serial_number: '',
       model: '',
       cpu: '',
       storage: '',
       ram: '',
       gpu: '',
-      purchaseDate: '',
-      warrantyExpDate: '',
+      purchase_date: '',
+      warranty_exp_date: '',
+      issue_date: '',
     });
   };
 
@@ -343,7 +459,7 @@ function LaptopManagement() {
   };
 
   const openEditModal = (laptop) => {
-    setFormData({ ...laptop });
+    setFormData(prepareEditFormData(laptop));
     setShowEditModal(true);
   };
 
@@ -352,39 +468,111 @@ function LaptopManagement() {
     setShowDetailModal(true);
   };
 
-  const handleImportExcel = (e) => {
+  const handleImportExcel = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
-      const bstr = evt.target.result;
-      const wb = XLSX.read(bstr, { type: 'binary' });
-      const wsname = wb.SheetNames[0];
-      const ws = wb.Sheets[wsname];
-      const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
 
-      const importedLaptops = data.slice(1).map((row, index) => ({
-        id: laptops.length + index + 1,
-        employeeId: row[0] || '',
-        name: row[1] || '',
-        windows: row[2] || '',
-        kristellarAD: row[3] === 'true' || row[3] === true,
-        serialNumber: row[4] || '',
-        model: row[5] || '',
-        cpu: row[6] || '',
-        storage: row[7] || '',
-        ram: row[8] || '',
-        gpu: row[9] || '',
-        purchaseDate: row[10] || '',
-        warrantyExpDate: row[11] || '',
-        issueDate: row[12] || ''
-      }));
+        // Map Excel columns → backend payload (camelCase)
+        const importedPayloads = data.slice(1)
+          .map((row) => ({
+            employeeId: String(row[0] || '').trim(),
+            name: String(row[1] || '').trim(),
+            windows: String(row[2] || '').trim(),
+            kristellarAD: row[3] === 'true' || row[3] === true || String(row[3]).toLowerCase() === 'yes',
+            serialNumber: String(row[4] || '').trim(),
+            model: String(row[5] || '').trim(),
+            cpu: String(row[6] || '').trim(),
+            storage: String(row[7] || '').trim(),
+            ram: String(row[8] || '').trim(),
+            gpu: String(row[9] || '').trim(),
+            purchaseDate: row[10] ? excelDateToJSDate(row[10]) : null,
+            warrantyExpDate: row[11] ? excelDateToJSDate(row[11]) : null,
+            issueDate: row[12] ? excelDateToJSDate(row[12]) : null,
+          }))
+          .filter((p) => p.employeeId && p.name); // skip blank rows
 
-      setLaptops((prev) => [...prev, ...importedLaptops]);
-      setFilteredLaptops((prev) => [...prev, ...importedLaptops]);
-      alert(`Imported ${importedLaptops.length} laptop records successfully!`);
+        if (importedPayloads.length === 0) {
+          alert('No valid laptop records found in the Excel file.');
+          return;
+        }
+
+        const token = sessionStorage.getItem('token');
+        let successCount = 0;
+        let failedCount = 0;
+        let failureReasons = [];
+
+        // Import one by one (safe & easy to debug)
+        for (const payload of importedPayloads) {
+          try {
+            const res = await fetch(`${API_BASE_URL}/api/laptops`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+              },
+              body: JSON.stringify(payload),
+            });
+
+            if (res.ok) successCount++;
+            else {
+              failedCount++;
+              const errData = await res.json().catch(() => ({}));
+              const msg = errData.error || 'Unknown error';
+              failureReasons.push(
+                `${payload.employeeId || payload.serialNumber || 'row'}: ${msg}`
+              );
+            }
+          } catch (err) {
+            failedCount++;
+            failureReasons.push(
+              `${payload.employeeId || payload.serialNumber || 'row'}: ${err.message}`
+            );
+          }
+        }
+
+        // ── Build user-friendly message ───────────────────────────────
+      let message = `Successfully Imported ${successCount} laptop${successCount === 1 ? '' : 's'}.`;
+
+      if (failedCount > 0) {
+        message += `\n\n${failedCount} record${failedCount === 1 ? ' was' : 's were'} skipped (already exists or invalid).`;
+
+        if (failureReasons.length > 0 && failureReasons.length <= 8) {
+          message += '\n\nDetails:\n' + failureReasons.join('\n');
+        } 
+      }
+
+      alert(message);
+
+        // Refresh list from database
+        if (successCount > 0) {
+          const refreshRes = await fetch(`${API_BASE_URL}/api/laptops`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (refreshRes.ok) {
+            const freshData = await refreshRes.json();
+            setLaptops(freshData);
+            setFilteredLaptops(freshData);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Error importing Excel file: ' + err.message);
+      }
     };
+
     reader.readAsBinaryString(file);
   };
 
@@ -415,6 +603,9 @@ function LaptopManagement() {
       </>
     );
   }
+
+  if (loading) return <div className="loading">Loading laptops...</div>;
+  if (error) return <div className="error">Error: {error}</div>;
 
   return (
     <div className="dashboard">
@@ -510,18 +701,19 @@ function LaptopManagement() {
                   <select name="windows" value={filterInputs.windows} onChange={handleFilterChange} className="form-select">
                     <option value="">All</option>
                     <option value="Windows 11 Home">Windows 11 Home</option>
-                    <option value="Windows 11 pro">Windows 11 Pro</option>
-                    <option value="Windows 11 Enterprise">Windows 11 Enterprise</option>
-                    <option value="Windows 10 Pro">Windows 10 Pro</option>
-                    <option value="Windows 10 Enterprise">Windows 10 Enterprise</option>
-                    <option value="No OS">No OS / Linux</option>
+                    <option value="Windows 11 Pro">Windows 11 Pro</option>
+                    <option value="Windows 10">Windows 10</option>
+                    <option value="Ubuntu">Ubuntu</option>
+                    <option value="macOS">macOS</option>
+                    <option value="Linux">Other Linux</option>
+                    <option value="others">Others</option>
                   </select>
                 </div>
 
                 {/* Kristellar AD */}
                 <div>
                   <label className="form-label">Kristellar AD</label>
-                  <select name="kristellarAD" value={filterInputs.kristellarAD} onChange={handleFilterChange} className="form-select">
+                  <select name="kristellar_ad" value={filterInputs.kristellar_ad} onChange={handleFilterChange} className="form-select">
                     <option value="">All</option>
                     <option value="true">Yes</option>
                     <option value="false">No</option>
@@ -676,7 +868,7 @@ function LaptopManagement() {
                 style={{ cursor: 'pointer' }}
               >
                 <td>
-                  <HighlightText text={laptop.employeeId} searchTerm={searchTerm} />
+                  <HighlightText text={laptop.employee_id} searchTerm={searchTerm} />
                 </td>
                 <td>
                   <HighlightText text={laptop.name} searchTerm={searchTerm} />
@@ -685,11 +877,11 @@ function LaptopManagement() {
                   <HighlightText text={laptop.model || '-'} searchTerm={searchTerm} />
                 </td>
                 <td>
-                  <HighlightText text={laptop.serialNumber || '-'} searchTerm={searchTerm} />
+                  <HighlightText text={laptop.serial_number || '-'} searchTerm={searchTerm} />
                 </td>
                 <td><HighlightText text={laptop.windows || '-'} searchTerm={searchTerm} /></td>
-                <td>{laptop.kristellarAD ? 'Yes' : 'No'}</td>
-                <td>{laptop.warrantyExpDate || '-'}</td>
+                <td>{laptop.kristellar_ad ? 'Yes' : 'No'}</td>
+                <td>{formatDateToYYYYMMDD(laptop.warranty_exp_date) || '-'}</td>
                 <td onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <button
@@ -774,7 +966,7 @@ function LaptopManagement() {
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: '820px', width: '92%' }}>
             <div className="modal-header-wrapper">
-              <h2 className="modal-header">Edit Laptop – {formData.employeeId}</h2>
+              <h2 className="modal-header">Edit Laptop – {formData.employee_id}</h2>
               <button
                 className="modal-close-btn"
                 onClick={() => {
@@ -832,7 +1024,7 @@ function LaptopManagement() {
                 </div>
                 <div className="detail-item">
                   <div className="detail-label">Employee ID</div>
-                  <div className="detail-value"><HighlightText text={selectedLaptop.employeeId} searchTerm={searchTerm} /></div>
+                  <div className="detail-value"><HighlightText text={selectedLaptop.employee_id} searchTerm={searchTerm} /></div>
                 </div>
                 <div className="detail-item">
                   <div className="detail-label">Model</div>
@@ -840,7 +1032,7 @@ function LaptopManagement() {
                 </div>
                 <div className="detail-item">
                   <div className="detail-label">Serial Number</div>
-                  <div className="detail-value"><HighlightText text={selectedLaptop.serialNumber} searchTerm={searchTerm} /></div>
+                  <div className="detail-value"><HighlightText text={selectedLaptop.serial_number} searchTerm={searchTerm} /></div>
                 </div>
                 <div className="detail-item">
                   <div className="detail-label">Windows Version</div>
@@ -848,7 +1040,7 @@ function LaptopManagement() {
                 </div>
                 <div className="detail-item">
                   <div className="detail-label">Kristellar AD</div>
-                  <div className="detail-value">{selectedLaptop.kristellarAD ? 'Yes' : 'No'}</div>
+                  <div className="detail-value">{selectedLaptop.kristellar_ad ? 'Yes' : 'No'}</div>
                 </div>
                 <div className="detail-item">
                   <div className="detail-label">Processor</div>
@@ -868,16 +1060,16 @@ function LaptopManagement() {
                 </div>
                 <div className="detail-item">
                   <div className="detail-label">Purchase Date</div>
-                  <div className="detail-value">{<HighlightText text={selectedLaptop.purchaseDate} searchTerm={searchTerm} /> || '—'}</div>
+                  <div className="detail-value">{<HighlightText text={formatDateToYYYYMMDD(selectedLaptop.purchase_date)} searchTerm={searchTerm} /> || '—'}</div>
                 </div>
                 <div className="detail-item">
                   <div className="detail-label">Warranty Expiry</div>
-                  <div className="detail-value">{<HighlightText text={selectedLaptop.warrantyExpDate} searchTerm={searchTerm} /> || '—'}</div>
+                  <div className="detail-value">{<HighlightText text={formatDateToYYYYMMDD(selectedLaptop.warranty_exp_date)} searchTerm={searchTerm} /> || '—'}</div>
                 </div>
                 <div className="detail-item">
                   <div className="detail-label">Issue Date</div>
                   <div className="detail-value">
-                    {<HighlightText text={selectedLaptop.issueDate} searchTerm={searchTerm} /> || '—'}
+                    {<HighlightText text={formatDateToYYYYMMDD(selectedLaptop.issue_date)} searchTerm={searchTerm} /> || '—'}
                   </div>
                 </div>
               </div>
@@ -908,8 +1100,8 @@ function LaptopFormFields({ formData, handleInputChange }) {
           <input
             className="form-input"
             required
-            name="employeeId"
-            value={formData.employeeId}
+            name="employee_id"
+            value={formData.employee_id}
             onChange={handleInputChange}
             placeholder="KA001"
           />
@@ -1000,8 +1192,8 @@ function LaptopFormFields({ formData, handleInputChange }) {
           <label className="form-label">Serial Number</label>
           <input
             className="form-input"
-            name="serialNumber"
-            value={formData.serialNumber}
+            name="serial_number"
+            value={formData.serial_number}
             onChange={handleInputChange}
             placeholder="e.g. S4NRKD030555167"
           />
@@ -1039,8 +1231,8 @@ function LaptopFormFields({ formData, handleInputChange }) {
           <label className="form-label">Kristellar AD</label>
           <select
             className="form-select"
-            name="kristellarAD"
-            value={formData.kristellarAD}
+            name="kristellar_ad"
+            value={formData.kristellar_ad}
             onChange={handleInputChange}
           >
             <option value={false}>No</option>
@@ -1099,8 +1291,8 @@ function LaptopFormFields({ formData, handleInputChange }) {
         <input
           type="date"
           className="form-input"
-          name="purchaseDate"
-          value={formData.purchaseDate}
+          name="purchase_date"
+          value={formData.purchase_date}
           onChange={handleInputChange}
         />
       </div>
@@ -1110,19 +1302,19 @@ function LaptopFormFields({ formData, handleInputChange }) {
         <input
           type="date"
           className="form-input"
-          name="warrantyExpDate"
-          value={formData.warrantyExpDate}
+          name="warranty_exp_date"
+          value={formData.warranty_exp_date}
           onChange={handleInputChange}
         />
       </div>
 
       <div className="form-group full-width">
-        <label className="form-label">Issue Date (Assigned to Employee)</label>
+        <label className="form-label">Issue Date </label>
         <input
           type="date"
           className="form-input"
-          name="issueDate"
-          value={formData.issueDate}
+          name="issue_date"
+          value={formData.issue_date}
           onChange={handleInputChange}
         />
       </div>

@@ -21,6 +21,8 @@ const authRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const userModel = require('./models/userModel');
 const bcrypt = require('bcryptjs');
+const laptopRoutes = require('./routes/laptopRoutes');
+const laptopModel = require('./models/laptopModel');
 
 
 const app = express();
@@ -43,6 +45,7 @@ app.use('/api/sales', salesRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/banks', bankRoutes);
 app.use('/api/bill-expenditures', billExpenditureRoutes);
+app.use('/api/laptops', laptopRoutes); 
 
 // Initialize database tables
 const initializeDatabase = async () => {
@@ -60,6 +63,7 @@ const initializeDatabase = async () => {
     await projectModel.createBdexpTable();
     await bankModel.createBanksTable();
     await billExpenditureModel.createBillExpendituresTable();
+    await laptopModel.createLaptopsTable();
 
     // Create default admin if not exists
     const admin = await userModel.findUserByUsername("admin");
