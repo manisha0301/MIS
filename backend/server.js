@@ -29,6 +29,8 @@ const cctvModel = require('./models/cctvModel');
 const cctvRoutes = require('./routes/cctvRoutes');
 const cugRoutes = require('./routes/cugRoutes');
 const cugModel = require('./models/cugModel');
+const alcatelRoutes = require('./routes/alcatelRoutes');
+const alcatelModel = require('./models/alcatelModel');
 
 
 const app = express();
@@ -55,6 +57,7 @@ app.use('/api/laptops', laptopRoutes);
 app.use('/api/biometrics', biometricRoutes);
 app.use('/api/cctvs', cctvRoutes);
 app.use('/api/cugs', cugRoutes);
+app.use('/api/alcatels', alcatelRoutes);
 
 // Initialize database tables
 const initializeDatabase = async () => {
@@ -76,6 +79,7 @@ const initializeDatabase = async () => {
     await biometricModel.createBiometricsTable();
     await cctvModel.createCctvsTable();
     await cugModel.createCugsTable();
+    await alcatelModel.createAlcatelsTable();
 
     // Create default admin if not exists
     const admin = await userModel.findUserByUsername("admin");

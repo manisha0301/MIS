@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import * as XLSX from 'xlsx';
 import '../styles/AssetManagement.css';
+import API_BASE_URL from '../api/apiConfig';
 
 function Alcatel() {
   const [devices, setDevices] = useState([]);
@@ -9,6 +10,8 @@ function Alcatel() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const [filterInputs, setFilterInputs] = useState({
     manufacturer: '',
@@ -31,10 +34,43 @@ function Alcatel() {
     macNo: '',
   });
 
+  // Fetch all Alcatel records on mount
   useEffect(() => {
-    setDevices([]);
-    setFilteredDevices([]);
+    fetchAlcatels();
   }, []);
+
+  const fetchAlcatels = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const token = sessionStorage.getItem('token');
+      if (!token) {
+        throw new Error('Please login first');
+      }
+
+      const res = await fetch(`${API_BASE_URL}/api/alcatels`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!res.ok) {
+        if (res.status === 401) throw new Error('Session expired. Please login again.');
+        throw new Error('Failed to load Alcatel records');
+      }
+
+      const data = await res.json();
+      setDevices(data);
+      setFilteredDevices(data);
+    } catch (err) {
+      console.error(err);
+      setError(err.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Combined search + filters
   useEffect(() => {
@@ -45,11 +81,11 @@ function Alcatel() {
       const term = searchTerm.toLowerCase();
       result = result.filter((d) =>
         d.name?.toLowerCase().includes(term) ||
-        d.phoneNo?.toLowerCase().includes(term) ||
+        d.phone_no?.toLowerCase().includes(term) ||
         d.manufacturer?.toLowerCase().includes(term) ||
-        d.ipAddress?.toLowerCase().includes(term) ||
-        d.modelNo?.toLowerCase().includes(term) ||
-        d.macNo?.toLowerCase().includes(term)
+        d.ip_address?.toLowerCase().includes(term) ||
+        d.model_no?.toLowerCase().includes(term) ||
+        d.mac_no?.toLowerCase().includes(term)
       );
     }
 
@@ -58,7 +94,7 @@ function Alcatel() {
       result = result.filter((d) => d.manufacturer === appliedFilters.manufacturer);
     }
     if (appliedFilters.modelNo) {
-      result = result.filter((d) => d.modelNo === appliedFilters.modelNo);
+      result = result.filter((d) => d.model_no === appliedFilters.modelNo);
     }
 
     setFilteredDevices(result);
@@ -78,38 +114,107 @@ function Alcatel() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleAddDevice = (e) => {
+  const handleAddDevice = async (e) => {
     e.preventDefault();
-    const newDevice = {
-      id: devices.length + 1,
-      ...formData,
-    };
-    setDevices((prev) => [...prev, newDevice]);
-    setFilteredDevices((prev) => [...prev, newDevice]);
-    resetForm();
-    setShowAddModal(false);
-    alert('Alcatel phone added successfully!');
+
+    try {
+      const token = sessionStorage.getItem('token');
+      const payload = {
+        name: formData.name,
+        phoneNo: formData.phoneNo,
+        manufacturer: formData.manufacturer,
+        ipAddress: formData.ipAddress,
+        modelNo: formData.modelNo,
+        macNo: formData.macNo,
+      };
+
+      const res = await fetch(`${API_BASE_URL}/api/alcatels`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error('Failed to add Alcatel record');
+
+      const newRecord = await res.json();
+      setDevices((prev) => [...prev, newRecord]);
+      setFilteredDevices((prev) => [...prev, newRecord]);
+
+      resetForm();
+      setShowAddModal(false);
+      alert('Alcatel phone added successfully!');
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
   };
 
-  const handleEditDevice = (e) => {
+  const handleEditDevice = async (e) => {
     e.preventDefault();
-    const updatedDevice = { ...formData };
-    setDevices((prev) =>
-      prev.map((d) => (d.id === updatedDevice.id ? updatedDevice : d))
-    );
-    setFilteredDevices((prev) =>
-      prev.map((d) => (d.id === updatedDevice.id ? updatedDevice : d))
-    );
-    resetForm();
-    setShowEditModal(false);
-    alert('Record updated successfully!');
+
+    try {
+      const token = sessionStorage.getItem('token');
+      const payload = {
+        name: formData.name,
+        phoneNo: formData.phoneNo,
+        manufacturer: formData.manufacturer,
+        ipAddress: formData.ipAddress,
+        modelNo: formData.modelNo,
+        macNo: formData.macNo,
+      };
+
+      const res = await fetch(`${API_BASE_URL}/api/alcatels/${formData.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error('Failed to update Alcatel record');
+
+      const updated = await res.json();
+
+      setDevices((prev) =>
+        prev.map((d) => (d.id === updated.id ? updated : d))
+      );
+      setFilteredDevices((prev) =>
+        prev.map((d) => (d.id === updated.id ? updated : d))
+      );
+
+      resetForm();
+      setShowEditModal(false);
+      alert('Record updated successfully!');
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
   };
 
-  const handleDeleteDevice = (id) => {
+  const handleDeleteDevice = async (id) => {
     if (!window.confirm('Are you sure you want to delete this record?')) return;
-    setDevices((prev) => prev.filter((d) => d.id !== id));
-    setFilteredDevices((prev) => prev.filter((d) => d.id !== id));
-    alert('Record deleted successfully.');
+
+    try {
+      const token = sessionStorage.getItem('token');
+
+      const res = await fetch(`${API_BASE_URL}/api/alcatels/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!res.ok) throw new Error('Failed to delete Alcatel record');
+
+      setDevices((prev) => prev.filter((d) => d.id !== id));
+      setFilteredDevices((prev) => prev.filter((d) => d.id !== id));
+      alert('Record deleted successfully.');
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
   };
 
   const getActiveFilterCount = () => {
@@ -135,16 +240,24 @@ function Alcatel() {
   };
 
   const openEditModal = (device) => {
-    setFormData({ ...device });
+    setFormData({
+      id: device.id,
+      name: device.name,
+      phoneNo: device.phone_no,
+      manufacturer: device.manufacturer,
+      ipAddress: device.ip_address,
+      modelNo: device.model_no,
+      macNo: device.mac_no,
+    });
     setShowEditModal(true);
   };
 
-  const handleImportExcel = (e) => {
+  const handleImportExcel = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       const bstr = evt.target.result;
       const wb = XLSX.read(bstr, { type: 'binary' });
       const wsname = wb.SheetNames[0];
@@ -152,8 +265,7 @@ function Alcatel() {
       const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
 
       // Skip header row
-      const imported = data.slice(1).map((row, index) => ({
-        id: devices.length + index + 1,
+      const imported = data.slice(1).map((row) => ({
         name: String(row[1] || ''),           // Column B - Name
         phoneNo: String(row[2] || ''),        // Column C - Phone no.
         manufacturer: String(row[3] || ''),   // Column D - Manufacturer
@@ -162,9 +274,35 @@ function Alcatel() {
         macNo: String(row[6] || ''),          // Column G - Mac No
       }));
 
-      setDevices((prev) => [...prev, ...imported]);
-      setFilteredDevices((prev) => [...prev, ...imported]);
-      alert(`Imported ${imported.length} Alcatel records successfully!`);
+      try {
+        const token = sessionStorage.getItem('token');
+        const added = [];
+
+        for (const item of imported) {
+          const res = await fetch(`${API_BASE_URL}/api/alcatels`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(item),
+          });
+
+          if (!res.ok) {
+            console.error(`Failed to import row: ${JSON.stringify(item)}`);
+            continue;
+          }
+
+          const newRecord = await res.json();
+          added.push(newRecord);
+        }
+
+        setDevices((prev) => [...prev, ...added]);
+        setFilteredDevices((prev) => [...prev, ...added]);
+        alert(`Imported ${added.length} Alcatel records successfully!`);
+      } catch (err) {
+        alert('Error during import: ' + err.message);
+      }
     };
     reader.readAsBinaryString(file);
   };
@@ -290,11 +428,11 @@ function Alcatel() {
               <tr key={device.id}>
                 <td>{index + 1}</td>
                 <td><HighlightText text={device.name} searchTerm={searchTerm} /></td>
-                <td><HighlightText text={device.phoneNo} searchTerm={searchTerm} /></td>
+                <td><HighlightText text={device.phone_no} searchTerm={searchTerm} /></td>
                 <td><HighlightText text={device.manufacturer} searchTerm={searchTerm} /></td>
-                <td><HighlightText text={device.ipAddress} searchTerm={searchTerm} /></td>
-                <td><HighlightText text={device.modelNo} searchTerm={searchTerm} /></td>
-                <td><HighlightText text={device.macNo} searchTerm={searchTerm} /></td>
+                <td><HighlightText text={device.ip_address} searchTerm={searchTerm} /></td>
+                <td><HighlightText text={device.model_no} searchTerm={searchTerm} /></td>
+                <td><HighlightText text={device.mac_no} searchTerm={searchTerm} /></td>
                 <td onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <button className="action-button" onClick={() => openEditModal(device)}>Edit</button>
