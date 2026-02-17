@@ -1294,6 +1294,8 @@ function LaptopFormFields({ formData, handleInputChange }) {
           type="date"
           className="form-input"
           name="purchase_date"
+          min="2000-01-01"
+          max="2099-12-31"
           value={formData.purchase_date}
           onChange={handleInputChange}
         />
@@ -1305,6 +1307,8 @@ function LaptopFormFields({ formData, handleInputChange }) {
           type="date"
           className="form-input"
           name="warranty_exp_date"
+          min="2000-01-01"
+          max="2099-12-31"
           value={formData.warranty_exp_date}
           onChange={handleInputChange}
         />
@@ -1318,6 +1322,8 @@ function LaptopFormFields({ formData, handleInputChange }) {
           type="date"
           className="form-input"
           name="issue_date"
+          min="2000-01-01"
+          max="2099-12-31"
           value={formData.issue_date}
           onChange={handleInputChange}
         />

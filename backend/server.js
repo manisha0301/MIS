@@ -23,6 +23,8 @@ const userModel = require('./models/userModel');
 const bcrypt = require('bcryptjs');
 const laptopRoutes = require('./routes/laptopRoutes');
 const laptopModel = require('./models/laptopModel');
+const biometricRoutes = require('./routes/biometricRoutes');
+const biometricModel = require('./models/biometricModel');
 
 
 const app = express();
@@ -46,6 +48,7 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/banks', bankRoutes);
 app.use('/api/bill-expenditures', billExpenditureRoutes);
 app.use('/api/laptops', laptopRoutes); 
+app.use('/api/biometrics', biometricRoutes);
 
 // Initialize database tables
 const initializeDatabase = async () => {
@@ -64,6 +67,7 @@ const initializeDatabase = async () => {
     await bankModel.createBanksTable();
     await billExpenditureModel.createBillExpendituresTable();
     await laptopModel.createLaptopsTable();
+    await biometricModel.createBiometricsTable();
 
     // Create default admin if not exists
     const admin = await userModel.findUserByUsername("admin");

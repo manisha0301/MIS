@@ -10,6 +10,8 @@ function BiometricDevice() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const [filterInputs, setFilterInputs] = useState({
     location: '',
@@ -37,79 +39,75 @@ function BiometricDevice() {
     communicationMode: '',
   });
 
-  // Dummy data matching your Excel structure
   useEffect(() => {
-    const dummyData = [
-      // {
-      //   id: 1,
-      //   readerId: '52',
-      //   location: '4TH FLOOR IN',
-      //   ip: '172.30.0.45',
-      //   modelNo: 'FTXX',
-      //   serialNo: '107250203020',
-      //   manufacturer: 'SAVIOR',
-      //   communicationMode: 'Face + Card',
-      // },
-      // {
-      //   id: 2,
-      //   readerId: '53',
-      //   location: '3RD FLOOR IN',
-      //   ip: '172.30.0.43',
-      //   modelNo: 'FTXX',
-      //   serialNo: '107250203045',
-      //   manufacturer: 'SAVIOR',
-      //   communicationMode: 'Face + Card',
-      // },
-      // {
-      //   id: 3,
-      //   readerId: '54',
-      //   location: 'SERVER IN',
-      //   ip: '172.30.0.41',
-      //   modelNo: '88XX',
-      //   serialNo: '110241101029',
-      //   manufacturer: 'SAVIOR',
-      //   communicationMode: 'Finger + Card',
-      // },
-      // ... you can add more
-    ];
-    setDevices(dummyData);
-    setFilteredDevices(dummyData);
+    fetchDevices();
   }, []);
+  
+  const fetchDevices = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const token = sessionStorage.getItem('token');
+      if (!token) throw new Error('Please login first');
+
+      const res = await fetch(`${API_BASE_URL}/api/biometrics`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!res.ok) {
+        if (res.status === 401) throw new Error('Session expired. Please login again.');
+        throw new Error('Failed to load biometric devices');
+      }
+
+      const data = await res.json();
+      setDevices(data);
+      setFilteredDevices(data);
+    } catch (err) {
+      console.error(err);
+      setError(err.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Combined search + filters
-  useEffect(() => {
-    let result = [...devices];
+useEffect(() => {
+  let result = [...devices];
 
-    // 1. Text search
-    if (searchTerm.trim()) {
-      const term = searchTerm.toLowerCase();
-      result = result.filter((d) =>
-        d.readerId?.toLowerCase().includes(term) ||
-        d.location?.toLowerCase().includes(term) ||
-        d.ip?.toLowerCase().includes(term) ||
-        d.serialNo?.toLowerCase().includes(term) ||
-        d.modelNo?.toLowerCase().includes(term) ||
-        d.manufacturer?.toLowerCase().includes(term) ||
-        d.communicationMode?.toLowerCase().includes(term)
-      );
-    }
+  // 1. Text search
+  if (searchTerm.trim()) {
+    const term = searchTerm.toLowerCase();
+    result = result.filter((d) =>
+      d.reader_id?.toLowerCase().includes(term) ||
+      d.location?.toLowerCase().includes(term) ||
+      d.ip?.toLowerCase().includes(term) ||
+      d.serial_no?.toLowerCase().includes(term) ||
+      d.model_no?.toLowerCase().includes(term) ||
+      d.manufacturer?.toLowerCase().includes(term) ||
+      d.communication_mode?.toLowerCase().includes(term)
+    );
+  }
 
-    // 2. Advanced filters
-    if (appliedFilters.location) {
-      result = result.filter((d) => d.location === appliedFilters.location);
-    }
-    if (appliedFilters.manufacturer) {
-      result = result.filter((d) => d.manufacturer === appliedFilters.manufacturer);
-    }
-    if (appliedFilters.modelNo) {
-      result = result.filter((d) => d.modelNo === appliedFilters.modelNo);
-    }
-    if (appliedFilters.communicationMode) {
-      result = result.filter((d) => d.communicationMode === appliedFilters.communicationMode);
-    }
+  // 2. Advanced filters - fixed property names to match backend (snake_case)
+  if (appliedFilters.location) {
+    result = result.filter((d) => d.location === appliedFilters.location);
+  }
+  if (appliedFilters.manufacturer) {
+    result = result.filter((d) => d.manufacturer === appliedFilters.manufacturer);
+  }
+  if (appliedFilters.modelNo) {
+    result = result.filter((d) => d.model_no === appliedFilters.modelNo);
+  }
+  if (appliedFilters.communicationMode) {
+    result = result.filter((d) => d.communication_mode === appliedFilters.communicationMode);
+  }
 
-    setFilteredDevices(result);
-  }, [searchTerm, devices, appliedFilters]);
+  setFilteredDevices(result);
+}, [searchTerm, devices, appliedFilters]);
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
@@ -130,38 +128,107 @@ function BiometricDevice() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleAddDevice = (e) => {
+  const handleAddDevice = async (e) => {
     e.preventDefault();
-    const newDevice = {
-      id: devices.length + 1,
-      ...formData,
-    };
-    setDevices((prev) => [...prev, newDevice]);
-    setFilteredDevices((prev) => [...prev, newDevice]);
-    resetForm();
-    setShowAddModal(false);
-    alert('Device added successfully!');
+
+    try {
+      const token = sessionStorage.getItem('token');
+      const payload = {
+        readerId:        formData.readerId,
+        location:        formData.location,
+        ip:              formData.ip || null,
+        modelNo:         formData.modelNo || null,
+        serialNo:        formData.serialNo || null,
+        manufacturer:    formData.manufacturer || null,
+        communicationMode: formData.communicationMode || null,
+      };
+
+      const res = await fetch(`${API_BASE_URL}/api/biometrics`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error('Failed to add device');
+
+      const newDevice = await res.json();
+      setDevices(prev => [...prev, newDevice]);
+      setFilteredDevices(prev => [...prev, newDevice]);
+
+      resetForm();
+      setShowAddModal(false);
+      alert('Device added successfully!');
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
   };
 
-  const handleEditDevice = (e) => {
+  const handleEditDevice = async (e) => {
     e.preventDefault();
-    const updatedDevice = { ...formData };
-    setDevices((prev) =>
-      prev.map((d) => (d.id === updatedDevice.id ? updatedDevice : d))
-    );
-    setFilteredDevices((prev) =>
-      prev.map((d) => (d.id === updatedDevice.id ? updatedDevice : d))
-    );
-    resetForm();
-    setShowEditModal(false);
-    alert('Device updated successfully!');
+
+    try {
+      const token = sessionStorage.getItem('token');
+      const payload = { ...formData }; // already has correct shape except key names
+
+      // Rename keys to match backend expectation
+      const body = {
+        readerId: formData.readerId,
+        location: formData.location,
+        ip: formData.ip || null,
+        modelNo: formData.modelNo || null,
+        serialNo: formData.serialNo || null,
+        manufacturer: formData.manufacturer || null,
+        communicationMode: formData.communicationMode || null,
+      };
+
+      const res = await fetch(`${API_BASE_URL}/api/biometrics/${formData.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) throw new Error('Failed to update device');
+
+      const updated = await res.json();
+
+      setDevices(prev => prev.map(d => d.id === updated.id ? updated : d));
+      setFilteredDevices(prev => prev.map(d => d.id === updated.id ? updated : d));
+
+      resetForm();
+      setShowEditModal(false);
+      alert('Device updated!');
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
   };
 
-  const handleDeleteDevice = (id) => {
-    if (!window.confirm('Are you sure you want to delete this device?')) return;
-    setDevices((prev) => prev.filter((d) => d.id !== id));
-    setFilteredDevices((prev) => prev.filter((d) => d.id !== id));
-    alert('Device deleted successfully.');
+  const handleDeleteDevice = async (id) => {
+    if (!window.confirm('Delete this device?')) return;
+
+    try {
+      const token = sessionStorage.getItem('token');
+
+      const res = await fetch(`${API_BASE_URL}/api/biometrics/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) throw new Error('Failed to delete');
+
+      setDevices(prev => prev.filter(d => d.id !== id));
+      setFilteredDevices(prev => prev.filter(d => d.id !== id));
+      alert('Device deleted.');
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
   };
 
   const getActiveFilterCount = () => {
@@ -188,40 +255,130 @@ function BiometricDevice() {
   };
 
   const openEditModal = (device) => {
-    setFormData({ ...device });
+    setFormData({
+      id: device.id,
+      readerId: device.reader_id,
+      location: device.location,
+      ip: device.ip || '',
+      modelNo: device.model_no || '',
+      serialNo: device.serial_no || '',
+      manufacturer: device.manufacturer || '',
+      communicationMode: device.communication_mode || '',
+    });
     setShowEditModal(true);
   };
 
+  // New: Handle Excel Import
   const handleImportExcel = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const file = e.target.files[0];
+  if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (evt) => {
+  const reader = new FileReader();
+  reader.onload = async (evt) => {
+    try {
       const bstr = evt.target.result;
       const wb = XLSX.read(bstr, { type: 'binary' });
       const wsname = wb.SheetNames[0];
       const ws = wb.Sheets[wsname];
       const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
 
-      // Skip header row
-      const imported = data.slice(1).map((row, index) => ({
-        id: devices.length + index + 1,
-        readerId: String(row[0] || ''),
-        location: String(row[1] || ''),
-        ip: String(row[2] || ''),
-        modelNo: String(row[3] || ''),
-        serialNo: String(row[4] || ''),
-        manufacturer: String(row[5] || ''),
-        communicationMode: String(row[6] || ''),
-      }));
+      if (data.length < 2) {
+        alert('No data found in the Excel sheet (need at least header + 1 row).');
+        return;
+      }
 
-      setDevices((prev) => [...prev, ...imported]);
-      setFilteredDevices((prev) => [...prev, ...imported]);
-      alert(`Imported ${imported.length} device records successfully!`);
-    };
-    reader.readAsBinaryString(file);
+      const rows = data.slice(1); // skip header
+
+      const validDevices = [];
+      let skipped = 0;
+
+      for (const row of rows) {
+        if (row.length < 7 || !row[0] || !row[1]) {
+          skipped++;
+          continue;
+        }
+
+        // Force everything to string + trim
+        const safe = (val) => {
+          if (val == null) return null;
+          return String(val).trim();
+        };
+
+        const newDevice = {
+          readerId:         safe(row[0]),
+          location:         safe(row[1]),
+          ip:               safe(row[2]) || null,
+          modelNo:          safe(row[3]) || null,
+          serialNo:         safe(row[4]) || null,
+          manufacturer:     safe(row[5]) || null,
+          communicationMode: safe(row[6]) || null,
+        };
+
+        // Final required check (after conversion)
+        if (!newDevice.readerId || !newDevice.location) {
+          skipped++;
+          continue;
+        }
+
+        validDevices.push(newDevice);
+      }
+
+      if (validDevices.length === 0) {
+        alert(`No valid rows found. Skipped ${skipped} rows.`);
+        return;
+      }
+
+      const token = sessionStorage.getItem('token');
+      if (!token) {
+        alert('Please log in first.');
+        return;
+      }
+
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const device of validDevices) {
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/biometrics`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(device),
+          });
+
+          if (res.ok) {
+            successCount++;
+          } else {
+            failCount++;
+            console.warn(`Failed to import ${device.readerId}: ${res.status}`);
+          }
+        } catch (err) {
+          failCount++;
+          console.error('Import failed for', device.readerId, err);
+        }
+      }
+
+      alert(
+        `Imported ${successCount} device${successCount !== 1 ? 's' : ''} successfully.\n` +
+        (failCount > 0 ? `${failCount} failed (check console for details).` : '')
+      );
+
+      if (successCount > 0) {
+        fetchDevices(); // refresh list
+      }
+    } catch (err) {
+      console.error('Excel processing error:', err);
+      alert('Failed to read Excel file: ' + err.message);
+    }
   };
+
+  reader.readAsBinaryString(file);
+};
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p>Error: {error}</p>;
 
   function HighlightText({ text, searchTerm }) {
     if (!searchTerm || !text) return <>{text || ''}</>;
@@ -387,7 +544,7 @@ function BiometricDevice() {
             {filteredDevices.map((device) => (
               <tr key={device.id} >
                 <td>
-                  <HighlightText text={device.readerId} searchTerm={searchTerm} />
+                  <HighlightText text={device.reader_id} searchTerm={searchTerm} />
                 </td>
                 <td>
                   <HighlightText text={device.location} searchTerm={searchTerm} />
@@ -396,16 +553,16 @@ function BiometricDevice() {
                   <HighlightText text={device.ip} searchTerm={searchTerm} />
                 </td>
                 <td>
-                  <HighlightText text={device.modelNo} searchTerm={searchTerm} />
+                  <HighlightText text={device.model_no} searchTerm={searchTerm} />
                 </td>
                 <td>
-                  <HighlightText text={device.serialNo} searchTerm={searchTerm} />
+                  <HighlightText text={device.serial_no} searchTerm={searchTerm} />
                 </td>
                 <td>
                   <HighlightText text={device.manufacturer} searchTerm={searchTerm} />
                 </td>
                 <td>
-                  <HighlightText text={device.communicationMode} searchTerm={searchTerm} />
+                  <HighlightText text={device.communication_mode} searchTerm={searchTerm} />
                 </td>
                 <td onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -511,7 +668,7 @@ function DeviceFormFields({ formData, handleInputChange }) {
       </div>
 
       <div className="form-group">
-        <label className="form-label">IP Address</label>
+        <label className="form-label">IP Address <span className="required">*</span></label>
         <input
           className="form-input"
           name="ip"
@@ -522,7 +679,7 @@ function DeviceFormFields({ formData, handleInputChange }) {
       </div>
 
       <div className="form-group">
-        <label className="form-label">Model No</label>
+        <label className="form-label">Model No <span className="required">*</span></label>
         <input
           className="form-input"
           name="modelNo"
@@ -533,7 +690,7 @@ function DeviceFormFields({ formData, handleInputChange }) {
       </div>
 
       <div className="form-group">
-        <label className="form-label">Serial No</label>
+        <label className="form-label">Serial No <span className="required">*</span></label>
         <input
           className="form-input"
           name="serialNo"
@@ -544,7 +701,7 @@ function DeviceFormFields({ formData, handleInputChange }) {
       </div>
 
       <div className="form-group">
-        <label className="form-label">Manufacturer</label>
+        <label className="form-label">Manufacturer <span className="required">*</span></label>
         <input
           className="form-input"
           name="manufacturer"
@@ -555,7 +712,7 @@ function DeviceFormFields({ formData, handleInputChange }) {
       </div>
 
       <div className="form-group full-width">
-        <label className="form-label">Communication Mode</label>
+        <label className="form-label">Communication Mode <span className="required">*</span></label>
         <select
           className="form-select"
           name="communicationMode"
