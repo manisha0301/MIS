@@ -883,7 +883,7 @@ function LaptopManagement() {
                 <td>{laptop.kristellar_ad ? 'Yes' : 'No'}</td>
                 <td>{formatDateToYYYYMMDD(laptop.warranty_exp_date) || '-'}</td>
                 <td onClick={(e) => e.stopPropagation()}>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '8px' }}>
                     <button
                       className="action-button"
                       onClick={(e) => {
@@ -1189,7 +1189,9 @@ function LaptopFormFields({ formData, handleInputChange }) {
         </div>
 
         <div className="form-group">
-          <label className="form-label">Serial Number</label>
+          <label className="form-label">
+            Serial Number <span className="required">*</span>
+            </label>
           <input
             className="form-input"
             name="serial_number"
@@ -1309,7 +1311,9 @@ function LaptopFormFields({ formData, handleInputChange }) {
       </div>
 
       <div className="form-group full-width">
-        <label className="form-label">Issue Date </label>
+        <label className="form-label">
+          Issue Date <span className="required">*</span>
+          </label>
         <input
           type="date"
           className="form-input"
