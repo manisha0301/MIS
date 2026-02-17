@@ -400,7 +400,10 @@ function Alcatel() {
               </div>
             </div>
 
-            <div style={{ marginTop: '20px', textAlign: 'right' }}>
+            <div style={{marginTop: '20px', textAlign: 'right', display: 'flex', justifyContent: 'space-between', gap:'12px' }}>
+              <button className="btn-secondary" onClick={() => setShowFilterPanel(false)}>
+                Close
+              </button>
               <button className="btn-primary" onClick={() => { setAppliedFilters({ ...filterInputs }); setShowFilterPanel(false); }}>
                 Apply Filters
               </button>
