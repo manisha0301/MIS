@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import * as XLSX from 'xlsx';
+import API_BASE_URL from '../api/apiConfig';
 import '../styles/AssetManagement.css';
 
 function CUG() {
@@ -9,6 +10,8 @@ function CUG() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const [filterInputs, setFilterInputs] = useState({
     manufacturer: '',
@@ -31,23 +34,53 @@ function CUG() {
     imei2: '',
   });
 
-  // Optional: you can keep some dummy data or start empty
+  // Fetch all CUG records on mount
   useEffect(() => {
-    // If you want to start completely empty → comment out or leave empty array
-    setDevices([]);
-    setFilteredDevices([]);
+    fetchCugs();
   }, []);
 
-  // Combined search + filters
+  const fetchCugs = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const token = sessionStorage.getItem('token');
+      if (!token) {
+        throw new Error('Please login first');
+      }
+
+      const res = await fetch(`${API_BASE_URL}/api/cugs`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!res.ok) {
+        if (res.status === 401) throw new Error('Session expired. Please login again.');
+        throw new Error('Failed to load CUG records');
+      }
+
+      const data = await res.json();
+      setDevices(data);
+      setFilteredDevices(data);
+    } catch (err) {
+      console.error(err);
+      setError(err.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Search + filter logic (client-side)
   useEffect(() => {
     let result = [...devices];
 
-    // 1. Text search
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       result = result.filter((d) =>
-        d.modelNo?.toLowerCase().includes(term) ||
-        d.contactNo?.toLowerCase().includes(term) ||
+        d.model_no?.toLowerCase().includes(term) ||
+        d.contact_no?.toLowerCase().includes(term) ||
         d.name?.toLowerCase().includes(term) ||
         d.manufacturer?.toLowerCase().includes(term) ||
         d.imei1?.toLowerCase().includes(term) ||
@@ -55,12 +88,11 @@ function CUG() {
       );
     }
 
-    // 2. Advanced filters
     if (appliedFilters.manufacturer) {
       result = result.filter((d) => d.manufacturer === appliedFilters.manufacturer);
     }
     if (appliedFilters.modelNo) {
-      result = result.filter((d) => d.modelNo === appliedFilters.modelNo);
+      result = result.filter((d) => d.model_no === appliedFilters.modelNo);
     }
 
     setFilteredDevices(result);
@@ -83,38 +115,105 @@ function CUG() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleAddDevice = (e) => {
+  const handleAddDevice = async (e) => {
     e.preventDefault();
-    const newDevice = {
-      id: devices.length + 1,
-      ...formData,
-    };
-    setDevices((prev) => [...prev, newDevice]);
-    setFilteredDevices((prev) => [...prev, newDevice]);
-    resetForm();
-    setShowAddModal(false);
-    alert('Device added successfully!');
+
+    try {
+      const token = sessionStorage.getItem('token');
+      const payload = {
+        modelNo: formData.modelNo,
+        contactNo: formData.contactNo,
+        name: formData.name,
+        manufacturer: formData.manufacturer,
+        imei1: formData.imei1 || null,
+        imei2: formData.imei2 || null,
+      };
+
+      const res = await fetch(`${API_BASE_URL}/api/cugs`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error('Failed to add CUG record');
+
+      const newRecord = await res.json();
+      setDevices((prev) => [...prev, newRecord]);
+      setFilteredDevices((prev) => [...prev, newRecord]);
+
+      resetForm();
+      setShowAddModal(false);
+      alert('Record added successfully!');
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
   };
 
-  const handleEditDevice = (e) => {
+  const handleEditDevice = async (e) => {
     e.preventDefault();
-    const updatedDevice = { ...formData };
-    setDevices((prev) =>
-      prev.map((d) => (d.id === updatedDevice.id ? updatedDevice : d))
-    );
-    setFilteredDevices((prev) =>
-      prev.map((d) => (d.id === updatedDevice.id ? updatedDevice : d))
-    );
-    resetForm();
-    setShowEditModal(false);
-    alert('Device updated successfully!');
+
+    try {
+      const token = sessionStorage.getItem('token');
+      const payload = {
+        modelNo: formData.modelNo,
+        contactNo: formData.contactNo,
+        name: formData.name,
+        manufacturer: formData.manufacturer,
+        imei1: formData.imei1 || null,
+        imei2: formData.imei2 || null,
+      };
+
+      const res = await fetch(`${API_BASE_URL}/api/cugs/${formData.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) throw new Error('Failed to update CUG record');
+
+      const updated = await res.json();
+
+      setDevices((prev) =>
+        prev.map((d) => (d.id === updated.id ? updated : d))
+      );
+      setFilteredDevices((prev) =>
+        prev.map((d) => (d.id === updated.id ? updated : d))
+      );
+
+      resetForm();
+      setShowEditModal(false);
+      alert('Record updated successfully!');
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
   };
 
-  const handleDeleteDevice = (id) => {
+  const handleDeleteDevice = async (id) => {
     if (!window.confirm('Are you sure you want to delete this record?')) return;
-    setDevices((prev) => prev.filter((d) => d.id !== id));
-    setFilteredDevices((prev) => prev.filter((d) => d.id !== id));
-    alert('Record deleted successfully.');
+
+    try {
+      const token = sessionStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/api/cugs/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) throw new Error('Failed to delete record');
+
+      setDevices((prev) => prev.filter((d) => d.id !== id));
+      setFilteredDevices((prev) => prev.filter((d) => d.id !== id));
+      alert('Record deleted successfully.');
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
   };
 
   const getActiveFilterCount = () => {
@@ -140,7 +239,15 @@ function CUG() {
   };
 
   const openEditModal = (device) => {
-    setFormData({ ...device });
+    setFormData({
+      id: device.id,
+      modelNo: device.model_no,
+      contactNo: device.contact_no,
+      name: device.name,
+      manufacturer: device.manufacturer,
+      imei1: device.imei1 || '',
+      imei2: device.imei2 || '',
+    });
     setShowEditModal(true);
   };
 
@@ -149,30 +256,51 @@ function CUG() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
-      const bstr = evt.target.result;
-      const wb = XLSX.read(bstr, { type: 'binary' });
-      const wsname = wb.SheetNames[0];
-      const ws = wb.Sheets[wsname];
-      const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
 
-      // Skip header row (row 1)
-      const imported = data.slice(1).map((row, index) => ({
-        id: devices.length + index + 1,
-        modelNo: String(row[1] || ''),       // column B
-        contactNo: String(row[2] || ''),     // column C
-        name: String(row[3] || ''),          // column D
-        manufacturer: String(row[4] || ''),  // column E
-        imei1: String(row[5] || ''),         // column F
-        imei2: String(row[6] || ''),         // column G
-      }));
+        // Skip header
+        const imported = data.slice(1).map((row) => ({
+          modelNo: String(row[1] || ''),
+          contactNo: String(row[2] || ''),
+          name: String(row[3] || ''),
+          manufacturer: String(row[4] || ''),
+          imei1: String(row[5] || ''),
+          imei2: String(row[6] || ''),
+        }));
 
-      setDevices((prev) => [...prev, ...imported]);
-      setFilteredDevices((prev) => [...prev, ...imported]);
-      alert(`Imported ${imported.length} records successfully!`);
+        const token = sessionStorage.getItem('token');
+
+        // You can either:
+        // A) Import one-by-one (safer, but slower)
+        for (const rec of imported) {
+          await fetch(`${API_BASE_URL}/api/cugs`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(rec),
+          });
+        }
+
+        // B) Or refresh list after all attempts
+        await fetchCugs();
+        alert(`Attempted to import ${imported.length} records`);
+      } catch (err) {
+        alert('Import failed: ' + err.message);
+      }
     };
     reader.readAsBinaryString(file);
   };
+
+  if (loading) return <div className="loading">Loading CUG records...</div>;
+  if (error) return <div className="error">Error: {error}</div>;
 
   function HighlightText({ text, searchTerm }) {
     if (!searchTerm || !text) return <>{text || ''}</>;
@@ -316,8 +444,8 @@ function CUG() {
             {filteredDevices.map((device, index) => (
               <tr key={device.id}>
                 <td>{index + 1}</td>
-                <td><HighlightText text={device.modelNo} searchTerm={searchTerm} /></td>
-                <td><HighlightText text={device.contactNo} searchTerm={searchTerm} /></td>
+                <td><HighlightText text={device.model_no} searchTerm={searchTerm} /></td>
+                <td><HighlightText text={device.contact_no} searchTerm={searchTerm} /></td>
                 <td><HighlightText text={device.name} searchTerm={searchTerm} /></td>
                 <td><HighlightText text={device.manufacturer} searchTerm={searchTerm} /></td>
                 <td><HighlightText text={device.imei1} searchTerm={searchTerm} /></td>
@@ -437,7 +565,7 @@ function CugFormFields({ formData, handleInputChange }) {
       </div>
 
       <div className="form-group">
-        <label className="form-label">Manufacturer</label>
+        <label className="form-label">Manufacturer <span className="required">*</span></label>
         <input
           className="form-input"
           name="manufacturer"
