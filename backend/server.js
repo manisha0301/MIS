@@ -25,6 +25,8 @@ const laptopRoutes = require('./routes/laptopRoutes');
 const laptopModel = require('./models/laptopModel');
 const biometricRoutes = require('./routes/biometricRoutes');
 const biometricModel = require('./models/biometricModel');
+const cctvModel = require('./models/cctvModel');
+const cctvRoutes = require('./routes/cctvRoutes');
 
 
 const app = express();
@@ -49,6 +51,7 @@ app.use('/api/banks', bankRoutes);
 app.use('/api/bill-expenditures', billExpenditureRoutes);
 app.use('/api/laptops', laptopRoutes); 
 app.use('/api/biometrics', biometricRoutes);
+app.use('/api/cctvs', cctvRoutes);
 
 // Initialize database tables
 const initializeDatabase = async () => {
@@ -68,6 +71,7 @@ const initializeDatabase = async () => {
     await billExpenditureModel.createBillExpendituresTable();
     await laptopModel.createLaptopsTable();
     await biometricModel.createBiometricsTable();
+    await cctvModel.createCctvsTable();
 
     // Create default admin if not exists
     const admin = await userModel.findUserByUsername("admin");

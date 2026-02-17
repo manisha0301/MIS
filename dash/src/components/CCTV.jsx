@@ -12,6 +12,8 @@ function CCTV() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedCamera, setSelectedCamera] = useState(null);
   const [showFilterPanel, setShowFilterPanel] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const [filterInputs, setFilterInputs] = useState({
     location: '',
@@ -33,18 +35,43 @@ function CCTV() {
     manufacturer: '',
   });
 
-  // Dummy data (you can remove later when using real backend / Excel import)
+  // Fetch all cameras on mount
   useEffect(() => {
-    const dummyData = [
-    //   { id: 1, location: 'Workstation-3rd', ip: '172.30.0.21', modelNo: 'QNV-7012R', serialNo: 'ZSYT6V4X8000HBL', manufacturer: 'Hanwa' },
-    //   { id: 2, location: 'Workstation-4th', ip: '172.30.0.22', modelNo: 'QNV-7012R', serialNo: 'ZSYT6V4X8000MXR', manufacturer: 'Hanwa' },
-    //   { id: 3, location: 'Entrance-4th',   ip: '172.30.0.23', modelNo: 'QNV-7012R', serialNo: 'ZSYT6V4X8000FRN', manufacturer: 'Hanwa' },
-    ];
-    setCameras(dummyData);
-    setFilteredCameras(dummyData);
+    fetchCameras();
   }, []);
 
-  // Combined search + filter logic
+  const fetchCameras = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const token = sessionStorage.getItem('token');
+      if (!token) throw new Error('Please login first');
+
+      const res = await fetch(`${API_BASE_URL}/api/cctvs`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!res.ok) {
+        if (res.status === 401) throw new Error('Session expired. Please login again.');
+        throw new Error('Failed to load CCTV cameras');
+      }
+
+      const data = await res.json();
+      setCameras(data);
+      setFilteredCameras(data);
+    } catch (err) {
+      console.error(err);
+      setError(err.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Search + filter logic
   useEffect(() => {
     let result = [...cameras];
 
@@ -54,8 +81,8 @@ function CCTV() {
       result = result.filter(cam =>
         cam.location?.toLowerCase().includes(term) ||
         cam.ip?.toLowerCase().includes(term) ||
-        cam.modelNo?.toLowerCase().includes(term) ||
-        cam.serialNo?.toLowerCase().includes(term) ||
+        cam.model_no?.toLowerCase().includes(term) ||
+        cam.serial_no?.toLowerCase().includes(term) ||
         cam.manufacturer?.toLowerCase().includes(term)
       );
     }
@@ -86,44 +113,109 @@ function CCTV() {
   };
 
   // ── ADD ───────────────────────────────────────────────
-  const handleAddCamera = (e) => {
+  const handleAddCamera = async (e) => {
     e.preventDefault();
-    const newCamera = {
-      id: cameras.length + 1,
-      ...formData,
-    };
+    try {
+      const token = sessionStorage.getItem('token');
+      const payload = {
+        location: formData.location,
+        ip: formData.ip,
+        modelNo: formData.modelNo,
+        serialNo: formData.serialNo,
+        manufacturer: formData.manufacturer,
+      };
 
-    setCameras(prev => [...prev, newCamera]);
-    setFilteredCameras(prev => [...prev, newCamera]);
+      const res = await fetch(`${API_BASE_URL}/api/cctvs`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
 
-    resetForm();
-    setShowAddModal(false);
-    alert('Camera added successfully!');
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to add camera');
+      }
+
+      const newCamera = await res.json();
+      setCameras(prev => [...prev, newCamera]);
+      setFilteredCameras(prev => [...prev, newCamera]);
+
+      resetForm();
+      setShowAddModal(false);
+      alert('Camera added successfully!');
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
   };
 
-  // ── EDIT ──────────────────────────────────────────────
-  const handleEditCamera = (e) => {
+  // ── UPDATE ───────────────────────────────────────────
+  const handleEditCamera = async (e) => {
     e.preventDefault();
-    const updatedCamera = { ...formData };
+    try {
+      const token = sessionStorage.getItem('token');
+      const payload = {
+        location: formData.location,
+        ip: formData.ip,
+        modelNo: formData.modelNo,
+        serialNo: formData.serialNo,
+        manufacturer: formData.manufacturer,
+      };
 
-    setCameras(prev =>
-      prev.map(c => (c.id === updatedCamera.id ? updatedCamera : c))
-    );
-    setFilteredCameras(prev =>
-      prev.map(c => (c.id === updatedCamera.id ? updatedCamera : c))
-    );
+      const res = await fetch(`${API_BASE_URL}/api/cctvs/${formData.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
 
-    resetForm();
-    setShowEditModal(false);
-    alert('Camera updated successfully!');
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Failed to update camera');
+      }
+
+      const updatedCamera = await res.json();
+
+      setCameras(prev =>
+        prev.map(c => (c.id === updatedCamera.id ? updatedCamera : c))
+      );
+      setFilteredCameras(prev =>
+        prev.map(c => (c.id === updatedCamera.id ? updatedCamera : c))
+      );
+
+      resetForm();
+      setShowEditModal(false);
+      alert('Camera updated successfully!');
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
   };
 
-  const handleDeleteCamera = (id) => {
-    if (!window.confirm("Are you sure you want to delete this camera record?")) return;
+  // ── DELETE ───────────────────────────────────────────
+  const handleDeleteCamera = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this camera?")) return;
 
-    setCameras(prev => prev.filter(c => c.id !== id));
-    setFilteredCameras(prev => prev.filter(c => c.id !== id));
-    alert("Camera record deleted.");
+    try {
+      const token = sessionStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/api/cctvs/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) throw new Error('Failed to delete camera');
+
+      setCameras(prev => prev.filter(c => c.id !== id));
+      setFilteredCameras(prev => prev.filter(c => c.id !== id));
+      alert('Camera deleted successfully.');
+    } catch (err) {
+      alert('Error: ' + err.message);
+    }
   };
 
   const resetForm = () => {
@@ -143,7 +235,14 @@ function CCTV() {
   };
 
   const openEditModal = (camera) => {
-    setFormData({ ...camera });
+    setFormData({
+      id: camera.id,
+      location: camera.location,
+      ip: camera.ip,
+      modelNo: camera.model_no,
+      serialNo: camera.serial_no,
+      manufacturer: camera.manufacturer,
+    });
     setShowEditModal(true);
   };
 
@@ -163,26 +262,68 @@ const getActiveFilterCount = () => {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
-      const bstr = evt.target.result;
-      const wb = XLSX.read(bstr, { type: 'binary' });
-      const wsname = wb.SheetNames[0];
-      const ws = wb.Sheets[wsname];
-      const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
 
-      // Skip header row
-      const imported = data.slice(1).filter(row => row.some(cell => cell)).map((row, index) => ({
-        id: cameras.length + index + 1,
-        location:     String(row[1] || ''),
-        ip:           String(row[2] || ''),
-        modelNo:      String(row[3] || ''),
-        serialNo:     String(row[4] || ''),
-        manufacturer: String(row[5] || ''),
-      }));
+        // Skip header row, filter empty rows
+        const rows = data.slice(1).filter(row => row.some(cell => cell?.toString().trim()));
 
-      setCameras(prev => [...prev, ...imported]);
-      setFilteredCameras(prev => [...prev, ...imported]);
-      alert(`Imported ${imported.length} camera records.`);
+        const token = sessionStorage.getItem('token');
+        let successCount = 0;
+        let failed = [];
+
+        for (const row of rows) {
+          // Adjust indices according to your Excel structure:
+          // SL NO, Locations, IP, Model No, Serial No, Manufacturer
+          const payload = {
+            location:     String(row[1] || '').trim(),
+            ip:           String(row[2] || '').trim(),
+            modelNo:      String(row[3] || '').trim(),
+            serialNo:     String(row[4] || '').trim(),
+            manufacturer: String(row[5] || '').trim(),
+          };
+
+          if (!payload.location || !payload.ip || !payload.serialNo) {
+            failed.push(`Row skipped (missing required fields): ${payload.serialNo || 'unknown'}`);
+            continue;
+          }
+
+          try {
+            const res = await fetch(`${API_BASE_URL}/api/cctvs`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(payload),
+            });
+
+            if (res.ok) {
+              successCount++;
+            } else {
+              const err = await res.json();
+              failed.push(`Failed ${payload.serialNo}: ${err.error || 'unknown error'}`);
+            }
+          } catch (err) {
+            failed.push(`Error ${payload.serialNo}: ${err.message}`);
+          }
+        }
+
+        await fetchCameras(); // Refresh list
+
+        let msg = `${successCount} camera(s) imported successfully.`;
+        if (failed.length > 0) {
+          msg += `\n\nFailed entries:\n${failed.join('\n')}`;
+        }
+        alert(msg);
+      } catch (err) {
+        alert('Excel processing failed: ' + err.message);
+      }
     };
     reader.readAsBinaryString(file);
   };
@@ -206,6 +347,9 @@ const getActiveFilterCount = () => {
       </>
     );
   }
+
+  if (loading) return <div className="loading">Loading CCTV cameras...</div>;
+  if (error) return <div className="error">Error: {error}</div>;
 
   return (
     <div className="dashboard">
@@ -339,8 +483,8 @@ const getActiveFilterCount = () => {
                 <td>{cam.id}</td>
                 <td><HighlightText text={cam.location} searchTerm={searchTerm} /></td>
                 <td><HighlightText text={cam.ip} searchTerm={searchTerm} /></td>
-                <td><HighlightText text={cam.modelNo} searchTerm={searchTerm} /></td>
-                <td><HighlightText text={cam.serialNo} searchTerm={searchTerm} /></td>
+                <td><HighlightText text={cam.model_no} searchTerm={searchTerm} /></td>
+                <td><HighlightText text={cam.serial_no} searchTerm={searchTerm} /></td>
                 <td>{cam.manufacturer || '—'}</td>
                 <td onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
@@ -381,23 +525,23 @@ const getActiveFilterCount = () => {
             <form onSubmit={handleAddCamera} className="laptop-form">
               <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div className="form-group">
-                  <label className="form-label">Location *</label>
+                  <label className="form-label">Location <span className="required">*</span></label>
                   <input required name="location" value={formData.location} onChange={handleInputChange} className="form-input" />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">IP Address *</label>
+                  <label className="form-label">IP Address <span className="required">*</span></label>
                   <input required name="ip" value={formData.ip} onChange={handleInputChange} className="form-input" placeholder="172.30.0.21" />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Model No</label>
+                  <label className="form-label">Model No <span className="required">*</span></label>
                   <input name="modelNo" value={formData.modelNo} onChange={handleInputChange} className="form-input" />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Serial No</label>
+                  <label className="form-label">Serial No <span className="required">*</span></label>
                   <input name="serialNo" value={formData.serialNo} onChange={handleInputChange} className="form-input" />
                 </div>
                 <div className="form-group full-width">
-                  <label className="form-label">Manufacturer</label>
+                  <label className="form-label">Manufacturer <span className="required">*</span></label>
                   <input name="manufacturer" value={formData.manufacturer} onChange={handleInputChange} className="form-input" placeholder="Hanwa, Hikvision, etc." />
                 </div>
               </div>
@@ -423,23 +567,23 @@ const getActiveFilterCount = () => {
             <form onSubmit={handleEditCamera} className="laptop-form">
               <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div className="form-group">
-                  <label className="form-label">Location *</label>
+                  <label className="form-label">Location <span className="required">*</span></label>
                   <input required name="location" value={formData.location} onChange={handleInputChange} className="form-input" />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">IP Address *</label>
+                  <label className="form-label">IP Address <span className="required">*</span></label>
                   <input required name="ip" value={formData.ip} onChange={handleInputChange} className="form-input" />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Model No</label>
+                  <label className="form-label">Model No <span className="required">*</span></label>
                   <input name="modelNo" value={formData.modelNo} onChange={handleInputChange} className="form-input" />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Serial No</label>
+                  <label className="form-label">Serial No <span className="required">*</span></label>
                   <input name="serialNo" value={formData.serialNo} onChange={handleInputChange} className="form-input" />
                 </div>
                 <div className="form-group full-width">
-                  <label className="form-label">Manufacturer</label>
+                  <label className="form-label">Manufacturer <span className="required">*</span></label>
                   <input name="manufacturer" value={formData.manufacturer} onChange={handleInputChange} className="form-input" />
                 </div>
               </div>
