@@ -71,6 +71,63 @@ function LaptopManagement() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [notification, setNotification] = useState(null);
+
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => {
+      setNotification(null);
+    }, 5000); // auto-dismiss after 5 seconds
+  };
+
+  const Notification = () => {
+  if (!notification) return null;
+
+  const bgColor =
+    notification.type === 'success' ? '#10b981' :
+    notification.type === 'error'   ? '#ef4444' :
+    notification.type === 'warning' ? '#f59e0b' : '#3b82f6';
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: '20px',
+        right: '20px',
+        zIndex: 2000,
+        minWidth: '320px',
+        maxWidth: '500px',
+        padding: '16px 20px',
+        borderRadius: '8px',
+        backgroundColor: bgColor,
+        color: 'white',
+        boxShadow: '0 6px 20px rgba(0,0,0,0.25)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        fontWeight: 500,
+        fontSize: '1rem',
+        animation: 'slideIn 0.4s ease-out',
+      }}
+    >
+      <span>{notification.message}</span>
+      <button
+        onClick={() => setNotification(null)}
+        style={{
+          background: 'none',
+          border: 'none',
+          color: 'white',
+          fontSize: '1.4rem',
+          cursor: 'pointer',
+          marginLeft: '16px',
+          lineHeight: 1,
+        }}
+      >
+        ×
+      </button>
+    </div>
+  );
+};
 
   // Fetch laptops from backend
   useEffect(() => {
@@ -316,10 +373,10 @@ function LaptopManagement() {
 
       resetForm();
       setShowAddModal(false);
-      alert('Laptop added successfully!');
+      showNotification('Laptop added successfully!', 'success');
     } catch (err) {
       console.error(err);
-      alert('Error adding laptop: ' + err.message);
+      showNotification('Error adding laptop: ' + err.message, 'error');
     }
   };
 
@@ -375,10 +432,10 @@ function LaptopManagement() {
 
       resetForm();
       setShowEditModal(false);
-      alert('Laptop updated successfully!');
+      showNotification('Laptop updated successfully!', 'success');
     } catch (err) {
       console.error(err);
-      alert('Error updating laptop: ' + err.message);
+      showNotification('Error updating laptop: ' + err.message, 'error');
     }
   };
 
@@ -399,10 +456,10 @@ function LaptopManagement() {
       setLaptops(prev => prev.filter(l => l.id !== id));
       // filters auto-update
 
-      alert("Laptop record deleted successfully.");
+      showNotification('Laptop record deleted successfully.', 'success');
     } catch (err) {
       console.error(err);
-      alert('Error deleting laptop: ' + err.message);
+      showNotification('Error deleting laptop: ' + err.message, 'error');
     }
   };
 
@@ -501,7 +558,7 @@ function LaptopManagement() {
           .filter((p) => p.employeeId && p.name); // skip blank rows
 
         if (importedPayloads.length === 0) {
-          alert('No valid laptop records found in the Excel file.');
+          showNotification('No valid laptop records found in the Excel file.', 'warning');
           return;
         }
 
@@ -547,10 +604,11 @@ function LaptopManagement() {
 
         if (failureReasons.length > 0 && failureReasons.length <= 8) {
           message += '\n\nDetails:\n' + failureReasons.join('\n');
-        } 
+        }
+        showNotification(message, 'warning');   // or 'error' depending on your preference
+      } else {
+        showNotification(message, 'success');
       }
-
-      alert(message);
 
         // Refresh list from database
         if (successCount > 0) {
@@ -569,7 +627,7 @@ function LaptopManagement() {
         }
       } catch (err) {
         console.error(err);
-        alert('Error importing Excel file: ' + err.message);
+        showNotification('Error importing Excel file: ' + err.message, 'error');
       }
     };
 
@@ -609,6 +667,7 @@ function LaptopManagement() {
 
   return (
     <div className="dashboard">
+      <Notification />
       <div className="header">
         <h1>Laptop Management</h1>
         <div style={{ display: 'flex', gap: '12px' }}>
